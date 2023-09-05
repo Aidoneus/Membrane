@@ -1,0 +1,12 @@
+# Custom build script and its temporary files
+build
+build.terser
+
+# Configuration file for the script
+membrane.json
+
+# PM2 configuration and startup script
+pm2_membrane.sh
+
+# IDE files
+.idea

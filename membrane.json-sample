@@ -1,0 +1,56 @@
+{
+  "types": {
+    "vanilla": 0,
+    "m": 1,
+    "cx": 2,
+    "modern": 3
+  },
+  "servers": [
+    {
+      "host": "vangers.net",
+      "port": 2197,
+      "type": 3,
+      "protocol": "\u0002"
+    },
+    {
+      "host": "fenex.vangers.net",
+      "port": 2197,
+      "type": 0,
+      "protocol": "\u0001"
+    },
+    {
+      "host": "kiv.name",
+      "port": 2197,
+      "type": 3,
+      "protocol": "\u0002"
+    },
+    {
+      "host": "m1.vangers.net",
+      "port": 2197,
+      "type": 1,
+      "protocol": "\u0001"
+    },
+    {
+      "host": "kiv.name",
+      "port": 2195,
+      "type": 2,
+      "protocol": "\u0002"
+    }
+  ],
+  "reconnectTimeout": 600000,
+  "gameRequestTimeout": 10000,
+  "gameModes": [
+    "Ван-Вар",
+    "Мехосома",
+    "Пассемблос",
+    "Охотрон",
+    "Мастодонт"
+  ],
+  "gameLetters": "VMPHD",
+  "tgToken": "Place your token here",
+  "tgPort": 443,
+  "tgSendTimeout": 10000,
+  "tgChats": [],
+  "redirectHost": "your.domain.com",
+  "redirectPort": 38383
+}
