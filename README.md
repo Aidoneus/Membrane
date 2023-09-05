@@ -6,10 +6,10 @@
 
 ## Launch
 
-You can start the bot using the following command: `node membrane.js`. Script expects a file named `membrane.json` to be in the same folder to be working correctly (see below the "Configuration" section). Script also supports some optional arguments:
+You can start the bot using the following command: `node membrane.js`. Script expects a file named `membrane.json` to be in the same folder (see below the "Configuration" section). Script also supports some optional arguments:
 
 - `-h`, `--help`: prints help message.
-- `-s`, `--silent`: disabled most of logging/"console" output.
+- `-s`, `--silent`: disables most of logging/"console" output.
 
 ## Configuration
 
