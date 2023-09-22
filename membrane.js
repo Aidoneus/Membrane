@@ -23,6 +23,7 @@ const { Socket } = require("net"),
   argSilent = argsI[2] >= 0 || argsI[3] >= 0,
   M = {},
   configPath = dir + "/membrane.json",
+  badWordsPath = dir + "/bad_words.txt",
   cp866 = `АБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдежзийклмноп${" ".repeat(
     48,
   )}рстуфхцчшщъыьэюяЁё${" ".repeat(14)}`,
@@ -38,9 +39,42 @@ const { Socket } = require("net"),
       `Enter, my son, please...\x00${clientPool.get(clientKey).protocol}`,
     (clientKey, dataString, dataLength, code) => dataLength && code === 0xc1,
   ],
-  // https://gist.github.com/imDaniX/8449f40655fcc1b92ae8d756cbca1264
-  censorRegExp =
-    /(?<![а-яё])(?:(?:(?:у|[нз]а|(?:хитро|не)?вз?[ыьъ]|с[ьъ]|(?:и|ра)[зс]ъ?|(?:о[тб]|п[оа]д)[ьъ]?|(?:\S(?=[а-яё]))+?[оаеи-])-?)?(?:[её](?:б(?!о[рй]|рач)|п[уа](?:ц|тс))|и[пб][ае][тцд][ьъ]).*?|(?:(?:н[иеа]|ра[зс]|[зд]?[ао](?:т|дн[оа])?|с(?:м[еи])?|а[пб]ч)-?)?ху(?:[яйиеёю]|л+и(?!ган)).*?|бл(?:[эя]|еа?)(?:[дт][ьъ]?)?|\S*?(?:п(?:[иеё]зд|ид[аое]?р|ед(?:р(?!о)|[аое]р|ик))|бля(?:[дбц]|тс)|[ое]ху[яйиеёю]|хуйн).*?|(?:о[тб]?|про|на|вы)?м(?:анд(?:[ауеыи](?:л(?:и[сзщ])?[ауеиы])?|ой|[ао]в.*?|юк(?:ов|[ауи])?|е[нт]ь|ища)|уд(?:[яаиое].+?|е?н(?:[ьюия]|ей))|[ао]л[ао]ф[ьъ](?:[яиюе]|[еёо]й))|елд[ауые].*?|ля[тд]ь|(?:[нз]а|по)х)(?![а-яё])/giu,
+  badWords = [],
+  censorCharmap = {
+    'а' : ['а', 'a', '@'],
+    'б' : ['б', '6', 'b'],
+    'в' : ['в', 'b', 'v'],
+    'г' : ['г', 'r', 'g'],
+    'д' : ['д', 'd', 'g'],
+    'е' : ['е', 'e'],
+    'ё' : ['ё', 'e'],
+    'ж' : ['ж'/*, 'zh'*/, '*'],
+    'з' : ['з', '3', 'z'],
+    'и' : ['и', 'u', 'i'],
+    'й' : ['й', 'u', 'i'],
+    'к' : ['к', 'k'/*, 'i{', '|{'*/],
+    'л' : ['л', 'l'/*, 'ji', '/\\'*/],
+    'м' : ['м', 'm'],
+    'н' : ['н', 'h', 'n'],
+    'о' : ['о', 'o', '0'],
+    'п' : ['п', 'n', 'p'],
+    'р' : ['р', 'r', 'p'],
+    'с' : ['с', 'c', 's'],
+    'т' : ['т', 'm', 't'],
+    'у' : ['у', 'y', 'u'],
+    'ф' : ['ф', 'f'],
+    'х' : ['х', 'x', 'h'/*, '}{'*/],
+    'ц' : ['ц', 'c', /*'u,'*/],
+    'ч' : ['ч', /*'ch',*/ '4'],
+    'ш' : ['ш'/*, 'sh'*/],
+    'щ' : ['щ'/*, 'sch'*/],
+    'ь' : ['ь', 'b'],
+    'ы' : ['ы'/*, 'bi'*/],
+    'ъ' : ['ъ'],
+    'э' : ['э', 'e'],
+    'ю' : ['ю'/*, 'io', '|o'*/],
+    'я' : ['я'/*, 'ya'*/, 'r'],
+  },
   tgStack = [],
   redirectServerOptions = {
     /* no specific options for now */
@@ -74,6 +108,111 @@ function decodeArray(codeArray) {
 
 function pad(value, length = 2) {
   return value.toString(10).padStart(length, "0");
+}
+
+function tgEscape(src) {
+  return src
+    .replaceAll('*', "\\*")
+    .replaceAll('=', "\\=");
+}
+
+function getRndString(length) {
+  let result = '';
+  for (let i = 0; i < length; i += 1) {
+    result += '█▄▀'[(Math.random() * 3) | 0];
+  }
+  return result;
+}
+
+// Based on: https://habr.com/ru/sandbox/145868/ , https://github.com/gustf/js-levenshtein , https://github.com/bars38/Russian_ban_words
+function distanceMin(d0, d1, d2, bx, ay) {
+  return (d0 < d1 || d2 < d1)
+    ? (d0 > d2 ? d2 + 1 : d0 + 1)
+    : (bx === ay ? d1 : d1 + 1);
+}
+function distance(a, b) {
+  if (a === b) return 0;
+  if (a.length > b.length) [a, b] = [b, a];
+  let
+    la = a.length, lb = b.length, offset = 0, vector = [],
+    x = 0, y, d0, d1, d2, d3, dd, dy, ay, bx0, bx1, bx2, bx3;
+  while (la > 0 && (a[la - 1] === b[lb - 1])) {
+    la--;
+    lb--;
+  }
+  while (offset < la && (a[offset] === b[offset])) offset++;
+  la -= offset;
+  lb -= offset;
+  if (la === 0 || lb < 3) return lb;
+  for (y = 0; y < la; y++) {
+    vector.push(y + 1);
+    vector.push(a.charCodeAt(offset + y));
+  }
+  const len = vector.length - 1;
+  for (; x < lb - 3;) {
+    bx0 = b.charCodeAt(offset + (d0 = x));
+    bx1 = b.charCodeAt(offset + (d1 = x + 1));
+    bx2 = b.charCodeAt(offset + (d2 = x + 2));
+    bx3 = b.charCodeAt(offset + (d3 = x + 3));
+    dd = (x += 4);
+    for (y = 0; y < len; y += 2) {
+      dy = vector[y];
+      ay = vector[y + 1];
+      d0 = distanceMin(dy, d0, d1, bx0, ay);
+      d1 = distanceMin(d0, d1, d2, bx1, ay);
+      d2 = distanceMin(d1, d2, d3, bx2, ay);
+      dd = distanceMin(d2, d3, dd, bx3, ay);
+      vector[y] = dd;
+      d3 = d2;
+      d2 = d1;
+      d1 = d0;
+      d0 = dy;
+    }
+  }
+
+  for (; x < lb;) {
+    bx0 = b.charCodeAt(offset + (d0 = x));
+    dd = ++x;
+    for (y = 0; y < len; y += 2) {
+      dy = vector[y];
+      vector[y] = dd = distanceMin(dy, d0, dd, bx0, vector[y + 1]);
+      d0 = dy;
+    }
+  }
+
+  return dd;
+}
+function censor(src) {
+  // todo You can replace spaces in the source string with "", but you should somehow keep track of the original
+  //  __range__ in the src that was occupied by the filtered string
+  const censorData = [];
+  let i = 0,
+    /**
+     * @type {string}
+     */
+    realStr = src.slice().toLowerCase(),
+    tmpStr = '';
+  Object.entries(censorCharmap).forEach(([realLetter, replacementList]) => {
+    replacementList.forEach(replacement => {
+      // todo Keep note of how many extra symbols this specific replacement inserted and make use of it below
+      //  in the badWords.forEach(...) cycle
+      for (i = 0; i < src.length; i += 1) realStr = realStr.replaceAll(replacement, realLetter);
+    });
+  });
+  badWords.forEach(word => {
+    for (i = 0; i <= (realStr.length - word.length); i += 1) {
+      tmpStr = realStr.slice(i, i + word.length);
+      if (distance(tmpStr, word) <= (word.length * 0.25)) {
+        log(`[filter] Found word "${word}" as "${tmpStr}" in string "${src}"`);
+        censorData.push([i, i + word.length]);
+      }
+    }
+  });
+  tmpStr = src.slice();
+  censorData.forEach(([strStart, strEnd]) => {
+    tmpStr = tmpStr.slice(0, strStart) + getRndString(strEnd - strStart) + tmpStr.slice(strEnd);
+  });
+  return tmpStr;
 }
 // </editor-fold>
 
@@ -229,7 +368,7 @@ function sendToTgChat(chatId, content) {
       chat_id: chatId,
       parse_mode: "MarkdownV2",
       disable_web_page_preview: true,
-      text: content,
+      text: tgEscape(content),
     }),
     req = request(
       {
@@ -260,15 +399,15 @@ function receiveTgResponse(response) {
 function getTgGameLink(client, gameData) {
   // Commented out for now as telegram does not support links with Steam browser protocol atm
   // return `[${gameData.name}](steam://run/264080//\-server ${client.host} \-port ${client.port} \-game ${gameData.id}/) \\(${gameData.mode}\\)`;
-  let censoredName = gameData.name.slice();
-  [...gameData.name.matchAll(censorRegExp)].forEach(([censoredString]) => {
-    censoredName = censoredName.replace(
-      censoredString,
-      "\\*".repeat(censoredString.length),
-    );
-  });
+  // let censoredName = gameData.name.slice();
+  // [...gameData.name.matchAll(censorRegExp)].forEach(([censoredString]) => {
+  //   censoredName = censoredName.replace(
+  //     censoredString,
+  //     "\\*".repeat(censoredString.length),
+  //   );
+  // });
 
-  return `[${censoredName}](${M.redirectHost}:${M.redirectPort}/r?s\\=${client.host}&p\\=${client.port}&g\\=${gameData.id}) \\(${gameData.mode}\\)`;
+  return tgEscape(`[${censor(gameData.name.slice())}](${M.redirectHost}:${M.redirectPort}/r?s=${client.host}&p=${client.port}&g=${gameData.id}) \\(${gameData.mode}\\)`);
 }
 // </editor-fold>
 
@@ -317,10 +456,15 @@ async function init() {
     log(`Configuration file ${configPath} was not found, aborting`);
     process.exit(1);
   }
+  if (!existsSync(badWordsPath)) {
+    log(`Bad words file ${badWordsPath} was not found, aborting`);
+    process.exit(1);
+  }
   Object.assign(
     M,
     JSON.parse(readFileSync(configPath, { encoding: "utf8", flag: "r" })),
   );
+  badWords.push(...readFileSync(badWordsPath, { encoding: "utf8", flag: "r" }).split('\n'));
 
   webServer = createServer(redirectServerOptions, redirectReqListener);
   webServer.listen(M.redirectPort);

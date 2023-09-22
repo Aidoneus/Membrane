@@ -21,6 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Should censor swear language even if words are obfuscated by putting whitespace characters inside them.
+- Fix replacement of symbols in "bad words" with 2 or more characters.
 - Redirect server should use autodetected hostname if `redirectHost` config property is set to false-y value.
 - Replace `sendToTgChat(M.tgChats[0], ...)` in `receiveGames(...)` with `sendToAllChats(...)` when it is implemented.
 - Look for config in the `{scriptDir}/{scriptName}.json` path instead of the hardcoded one (if no CLI argument with path was provided).
