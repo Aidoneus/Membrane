@@ -23,7 +23,8 @@ const { Socket } = require("net"),
   argSilent = argsI[2] >= 0 || argsI[3] >= 0,
   M = {},
   configPath = dir + "/membrane.json",
-  badWordsPath = dir + "/bad_words.txt",
+  badWordsLatinPath = dir + "/bad_words_latin.txt",
+  badWordsCyrillicPath = dir + "/bad_words_cyrillic.txt",
   cp866 = `АБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдежзийклмноп${" ".repeat(
     48,
   )}рстуфхцчшщъыьэюяЁё${" ".repeat(14)}`,
@@ -39,41 +40,71 @@ const { Socket } = require("net"),
       `Enter, my son, please...\x00${clientPool.get(clientKey).protocol}`,
     (clientKey, dataString, dataLength, code) => dataLength && code === 0xc1,
   ],
-  badWords = [],
+  badWords = { cyr: [], lat: [] },
   censorCharmap = {
-    'а' : ['а', 'a', '@'],
-    'б' : ['б', '6', 'b'],
-    'в' : ['в', 'b', 'v'],
-    'г' : ['г', 'r', 'g'],
-    'д' : ['д', 'd', 'g'],
-    'е' : ['е', 'e'],
-    'ё' : ['ё', 'e'],
-    'ж' : ['ж'/*, 'zh'*/, '*'],
-    'з' : ['з', '3', 'z'],
-    'и' : ['и', 'u', 'i'],
-    'й' : ['й', 'u', 'i'],
-    'к' : ['к', 'k'/*, 'i{', '|{'*/],
-    'л' : ['л', 'l'/*, 'ji', '/\\'*/],
-    'м' : ['м', 'm'],
-    'н' : ['н', 'h', 'n'],
-    'о' : ['о', 'o', '0'],
-    'п' : ['п', 'n', 'p'],
-    'р' : ['р', 'r', 'p'],
-    'с' : ['с', 'c', 's'],
-    'т' : ['т', 'm', 't'],
-    'у' : ['у', 'y', 'u'],
-    'ф' : ['ф', 'f'],
-    'х' : ['х', 'x', 'h'/*, '}{'*/],
-    'ц' : ['ц', 'c', /*'u,'*/],
-    'ч' : ['ч', /*'ch',*/ '4'],
-    'ш' : ['ш'/*, 'sh'*/],
-    'щ' : ['щ'/*, 'sch'*/],
-    'ь' : ['ь', 'b'],
-    'ы' : ['ы'/*, 'bi'*/],
-    'ъ' : ['ъ'],
-    'э' : ['э', 'e'],
-    'ю' : ['ю'/*, 'io', '|o'*/],
-    'я' : ['я'/*, 'ya'*/, 'r'],
+    lat: {
+      'a': ['a', 'а', '@'],
+      'b': ['b', '6'],
+      'c': ['c', 'с', '('],
+      'd': ['d'],
+      'e': ['e', 'е'],
+      'f': ['f'],
+      'g': ['g'],
+      'h': ['h', 'н'],
+      'i': ['i', '!'],
+      'j': ['j'],
+      'k': ['k', 'к'],
+      'l': ['l'],
+      'm': ['m', 'м'],
+      'n': ['n', 'п'],
+      'o': ['o', 'о'],
+      'p': ['p', 'р'],
+      'q': ['q'],
+      'r': ['r', 'г'],
+      's': ['s', '$'],
+      't': ['t', '+', '7', 'т'],
+      'u': ['u', 'и', 'ц'],
+      'v': ['v'],
+      'w': ['w'],
+      'x': ['x', 'х'],
+      'y': ['y', 'у'],
+      'z': ['z'],
+    },
+    cyr: {
+      'а': ['а', 'a', '@'],
+      'б': ['б', '6', 'b'],
+      'в': ['в', 'b', 'v'],
+      'г': ['г', 'r', 'g'],
+      'д': ['д', 'd', 'g'],
+      'е': ['е', 'e'],
+      'ё': ['ё', 'e'],
+      'ж': ['ж'/*, 'zh'*/, '*'],
+      'з': ['з', '3', 'z'],
+      'и': ['и', 'u', 'i'],
+      'й': ['й', 'u', 'i', 'y'],
+      'к': ['к', 'k'/*, 'i{', '|{'*/],
+      'л': ['л', 'l'/*, 'ji', '/\\'*/],
+      'м': ['м', 'm'],
+      'н': ['н', 'h', 'n'],
+      'о': ['о', 'o', '0'],
+      'п': ['п', 'n', 'p'],
+      'р': ['р', 'r', 'p'],
+      'с': ['с', 'c', 's', '('],
+      'т': ['т', 'm', 't', '+'],
+      'у': ['у', 'y', 'u'],
+      'ф': ['ф', 'f'],
+      'х': ['х', 'x', 'h'/*, '}{'*/],
+      'ц': ['ц', 'c', /*'u,'*/],
+      'ч': ['ч', /*'ch',*/ '4'],
+      'ш': ['ш'/*, 'sh'*/],
+      'щ': ['щ'/*, 'sch'*/],
+      'ь': ['ь', 'b'],
+      'ы': ['ы'/*, 'bi'*/],
+      'ъ': ['ъ'],
+      'э': ['э', 'e'],
+      'ю': ['ю'/*, 'io', '|o'*/],
+      'я': ['я'/*, 'ya'*/, 'r'],
+    },
   },
   tgStack = [],
   redirectServerOptions = {
@@ -110,12 +141,6 @@ function pad(value, length = 2) {
   return value.toString(10).padStart(length, "0");
 }
 
-function tgEscape(src) {
-  return src
-    .replaceAll('*', "\\*")
-    .replaceAll('=', "\\=");
-}
-
 function getRndString(length) {
   let result = '';
   for (let i = 0; i < length; i += 1) {
@@ -124,7 +149,11 @@ function getRndString(length) {
   return result;
 }
 
-// Based on: https://habr.com/ru/sandbox/145868/ , https://github.com/gustf/js-levenshtein , https://github.com/bars38/Russian_ban_words
+// Based on:
+// https://habr.com/ru/sandbox/145868/
+// https://github.com/gustf/js-levenshtein
+// https://github.com/bars38/Russian_ban_words
+// https://code.google.com/archive/p/badwordslist/downloads
 function distanceMin(d0, d1, d2, bx, ay) {
   return (d0 < d1 || d2 < d1)
     ? (d0 > d2 ? d2 + 1 : d0 + 1)
@@ -183,31 +212,33 @@ function distance(a, b) {
   return dd;
 }
 function censor(src) {
+  // todo Due to possible usage of one symbol as a replacement for multiple different ones there should be a way
+  //  to form alternate possible strings with different __order__ of replacements
   // todo You can replace spaces in the source string with "", but you should somehow keep track of the original
   //  __range__ in the src that was occupied by the filtered string
   const censorData = [];
-  let i = 0,
-    /**
-     * @type {string}
-     */
-    realStr = src.slice().toLowerCase(),
-    tmpStr = '';
-  Object.entries(censorCharmap).forEach(([realLetter, replacementList]) => {
-    replacementList.forEach(replacement => {
-      // todo Keep note of how many extra symbols this specific replacement inserted and make use of it below
-      //  in the badWords.forEach(...) cycle
-      for (i = 0; i < src.length; i += 1) realStr = realStr.replaceAll(replacement, realLetter);
+  let i = 0, realStr = '', tmpStr = '';
+
+  ['cyr', 'lat'].forEach(type => {
+    realStr = src.slice().toLowerCase();
+    Object.entries(censorCharmap[type]).forEach(([realLetter, replacementList]) => {
+      replacementList.forEach(replacement => {
+        // todo Keep note of how many extra symbols this specific replacement inserted and make use of it below
+        //  in the badWords.forEach(...) cycle
+        for (i = 0; i < src.length; i += 1) realStr = realStr.replaceAll(replacement, realLetter);
+      });
+    });
+    badWords[type].forEach(word => {
+      for (i = 0; i <= (realStr.length - word.length); i += 1) {
+        tmpStr = realStr.slice(i, i + word.length);
+        if (distance(tmpStr, word) <= (word.length * 0.25)) {
+          log(`[filter] Found word "${word}" as "${tmpStr}" in string "${src}"`);
+          censorData.push([i, i + word.length]);
+        }
+      }
     });
   });
-  badWords.forEach(word => {
-    for (i = 0; i <= (realStr.length - word.length); i += 1) {
-      tmpStr = realStr.slice(i, i + word.length);
-      if (distance(tmpStr, word) <= (word.length * 0.25)) {
-        log(`[filter] Found word "${word}" as "${tmpStr}" in string "${src}"`);
-        censorData.push([i, i + word.length]);
-      }
-    }
-  });
+
   tmpStr = src.slice();
   censorData.forEach(([strStart, strEnd]) => {
     tmpStr = tmpStr.slice(0, strStart) + getRndString(strEnd - strStart) + tmpStr.slice(strEnd);
@@ -348,7 +379,7 @@ async function receiveGames(clientKey, dataBuffer, pos) {
             "",
           )}`
         : `Создана новая игра: ${getTgGameLink(client, newGames[0])}`) +
-        `\n\nНажмите на название игры, чтобы присоединиться к ней \\(требуется установленная из Steam игра\\)`,
+        `\n\nНажмите на название игры, чтобы присоединиться к ней (требуется установленная из Steam игра)`,
     );
 
   client.games = games;
@@ -366,9 +397,9 @@ function sendToTgChat(chatId, content) {
   log(`[tg] sendToChat ${chatId}: ${content}`);
   const json = JSON.stringify({
       chat_id: chatId,
-      parse_mode: "MarkdownV2",
+      parse_mode: "HTML",
       disable_web_page_preview: true,
-      text: tgEscape(content),
+      text: content,
     }),
     req = request(
       {
@@ -406,8 +437,7 @@ function getTgGameLink(client, gameData) {
   //     "\\*".repeat(censoredString.length),
   //   );
   // });
-
-  return tgEscape(`[${censor(gameData.name.slice())}](${M.redirectHost}:${M.redirectPort}/r?s=${client.host}&p=${client.port}&g=${gameData.id}) \\(${gameData.mode}\\)`);
+  return `<a href="${M.redirectHost}:${M.redirectPort}/r?s=${client.host}&p=${client.port}&g=${gameData.id}">${censor(gameData.name.slice())}</a> (${gameData.mode})`;
 }
 // </editor-fold>
 
@@ -456,15 +486,20 @@ async function init() {
     log(`Configuration file ${configPath} was not found, aborting`);
     process.exit(1);
   }
-  if (!existsSync(badWordsPath)) {
-    log(`Bad words file ${badWordsPath} was not found, aborting`);
+  if (!existsSync(badWordsLatinPath)) {
+    log(`Bad words file ${badWordsLatinPath} was not found, aborting`);
+    process.exit(1);
+  }
+  if (!existsSync(badWordsCyrillicPath)) {
+    log(`Bad words file ${badWordsCyrillicPath} was not found, aborting`);
     process.exit(1);
   }
   Object.assign(
     M,
     JSON.parse(readFileSync(configPath, { encoding: "utf8", flag: "r" })),
   );
-  badWords.push(...readFileSync(badWordsPath, { encoding: "utf8", flag: "r" }).split('\n'));
+  badWords.lat.push(...readFileSync(badWordsLatinPath, { encoding: "utf8", flag: "r" }).split('\n'));
+  badWords.cyr.push(...readFileSync(badWordsCyrillicPath, { encoding: "utf8", flag: "r" }).split('\n'));
 
   webServer = createServer(redirectServerOptions, redirectReqListener);
   webServer.listen(M.redirectPort);
