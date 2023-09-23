@@ -43,67 +43,67 @@ const { Socket } = require("net"),
   badWords = { cyr: [], lat: [] },
   censorCharmap = {
     lat: {
-      'a': ['a', 'а', '@'],
-      'b': ['b', '6'],
-      'c': ['c', 'с', '('],
-      'd': ['d'],
-      'e': ['e', 'е'],
-      'f': ['f'],
-      'g': ['g'],
-      'h': ['h', 'н'],
-      'i': ['i', '!'],
-      'j': ['j'],
-      'k': ['k', 'к'],
-      'l': ['l'],
-      'm': ['m', 'м'],
-      'n': ['n', 'п'],
-      'o': ['o', 'о'],
-      'p': ['p', 'р'],
-      'q': ['q'],
-      'r': ['r', 'г'],
-      's': ['s', '$'],
-      't': ['t', '+', '7', 'т'],
-      'u': ['u', 'и', 'ц'],
-      'v': ['v'],
-      'w': ['w'],
-      'x': ['x', 'х'],
-      'y': ['y', 'у'],
-      'z': ['z'],
+      a: ["a", "а", "@"],
+      b: ["b", "6"],
+      c: ["c", "с", "("],
+      d: ["d"],
+      e: ["e", "е"],
+      f: ["f"],
+      g: ["g"],
+      h: ["h", "н"],
+      i: ["i", "!"],
+      j: ["j"],
+      k: ["k", "к"],
+      l: ["l"],
+      m: ["m", "м"],
+      n: ["n", "п"],
+      o: ["o", "о"],
+      p: ["p", "р"],
+      q: ["q"],
+      r: ["r", "г"],
+      s: ["s", "$"],
+      t: ["t", "+", "7", "т"],
+      u: ["u", "и", "ц"],
+      v: ["v"],
+      w: ["w"],
+      x: ["x", "х"],
+      y: ["y", "у"],
+      z: ["z"],
     },
     cyr: {
-      'а': ['а', 'a', '@'],
-      'б': ['б', '6', 'b'],
-      'в': ['в', 'b', 'v'],
-      'г': ['г', 'r', 'g'],
-      'д': ['д', 'd', 'g'],
-      'е': ['е', 'e'],
-      'ё': ['ё', 'e'],
-      'ж': ['ж'/*, 'zh'*/, '*'],
-      'з': ['з', '3', 'z'],
-      'и': ['и', 'u', 'i'],
-      'й': ['й', 'u', 'i', 'y'],
-      'к': ['к', 'k'/*, 'i{', '|{'*/],
-      'л': ['л', 'l'/*, 'ji', '/\\'*/],
-      'м': ['м', 'm'],
-      'н': ['н', 'h', 'n'],
-      'о': ['о', 'o', '0'],
-      'п': ['п', 'n', 'p'],
-      'р': ['р', 'r', 'p'],
-      'с': ['с', 'c', 's', '('],
-      'т': ['т', 'm', 't', '+'],
-      'у': ['у', 'y', 'u'],
-      'ф': ['ф', 'f'],
-      'х': ['х', 'x', 'h'/*, '}{'*/],
-      'ц': ['ц', 'c', /*'u,'*/],
-      'ч': ['ч', /*'ch',*/ '4'],
-      'ш': ['ш'/*, 'sh'*/],
-      'щ': ['щ'/*, 'sch'*/],
-      'ь': ['ь', 'b'],
-      'ы': ['ы'/*, 'bi'*/],
-      'ъ': ['ъ'],
-      'э': ['э', 'e'],
-      'ю': ['ю'/*, 'io', '|o'*/],
-      'я': ['я'/*, 'ya'*/, 'r'],
+      а: ["а", "a", "@"],
+      б: ["б", "6", "b"],
+      в: ["в", "b", "v"],
+      г: ["г", "r", "g"],
+      д: ["д", "d", "g"],
+      е: ["е", "e"],
+      ё: ["ё", "e"],
+      ж: ["ж" /*, 'zh'*/, "*"],
+      з: ["з", "3", "z"],
+      и: ["и", "u", "i"],
+      й: ["й", "u", "i", "y"],
+      к: ["к", "k" /*, 'i{', '|{'*/],
+      л: ["л", "l" /*, 'ji', '/\\'*/],
+      м: ["м", "m"],
+      н: ["н", "h", "n"],
+      о: ["о", "o", "0"],
+      п: ["п", "n", "p"],
+      р: ["р", "r", "p"],
+      с: ["с", "c", "s", "("],
+      т: ["т", "m", "t", "+"],
+      у: ["у", "y", "u"],
+      ф: ["ф", "f"],
+      х: ["х", "x", "h" /*, '}{'*/],
+      ц: ["ц", "c" /*'u,'*/],
+      ч: ["ч", /*'ch',*/ "4"],
+      ш: ["ш" /*, 'sh'*/],
+      щ: ["щ" /*, 'sch'*/],
+      ь: ["ь", "b"],
+      ы: ["ы" /*, 'bi'*/],
+      ъ: ["ъ"],
+      э: ["э", "e"],
+      ю: ["ю" /*, 'io', '|o'*/],
+      я: ["я" /*, 'ya'*/, "r"],
     },
   },
   tgStack = [],
@@ -142,9 +142,9 @@ function pad(value, length = 2) {
 }
 
 function getRndString(length) {
-  let result = '';
+  let result = "";
   for (let i = 0; i < length; i += 1) {
-    result += '█▄▀'[(Math.random() * 3) | 0];
+    result += "█▄▀"[(Math.random() * 3) | 0];
   }
   return result;
 }
@@ -155,21 +155,39 @@ function getRndString(length) {
 // https://github.com/bars38/Russian_ban_words
 // https://code.google.com/archive/p/badwordslist/downloads
 function distanceMin(d0, d1, d2, bx, ay) {
-  return (d0 < d1 || d2 < d1)
-    ? (d0 > d2 ? d2 + 1 : d0 + 1)
-    : (bx === ay ? d1 : d1 + 1);
+  return d0 < d1 || d2 < d1
+    ? d0 > d2
+      ? d2 + 1
+      : d0 + 1
+    : bx === ay
+    ? d1
+    : d1 + 1;
 }
 function distance(a, b) {
   if (a === b) return 0;
   if (a.length > b.length) [a, b] = [b, a];
-  let
-    la = a.length, lb = b.length, offset = 0, vector = [],
-    x = 0, y, d0, d1, d2, d3, dd, dy, ay, bx0, bx1, bx2, bx3;
-  while (la > 0 && (a[la - 1] === b[lb - 1])) {
+  let la = a.length,
+    lb = b.length,
+    offset = 0,
+    vector = [],
+    x = 0,
+    y,
+    d0,
+    d1,
+    d2,
+    d3,
+    dd,
+    dy,
+    ay,
+    bx0,
+    bx1,
+    bx2,
+    bx3;
+  while (la > 0 && a[la - 1] === b[lb - 1]) {
     la--;
     lb--;
   }
-  while (offset < la && (a[offset] === b[offset])) offset++;
+  while (offset < la && a[offset] === b[offset]) offset++;
   la -= offset;
   lb -= offset;
   if (la === 0 || lb < 3) return lb;
@@ -178,12 +196,12 @@ function distance(a, b) {
     vector.push(a.charCodeAt(offset + y));
   }
   const len = vector.length - 1;
-  for (; x < lb - 3;) {
+  for (; x < lb - 3; ) {
     bx0 = b.charCodeAt(offset + (d0 = x));
     bx1 = b.charCodeAt(offset + (d1 = x + 1));
     bx2 = b.charCodeAt(offset + (d2 = x + 2));
     bx3 = b.charCodeAt(offset + (d3 = x + 3));
-    dd = (x += 4);
+    dd = x += 4;
     for (y = 0; y < len; y += 2) {
       dy = vector[y];
       ay = vector[y + 1];
@@ -199,7 +217,7 @@ function distance(a, b) {
     }
   }
 
-  for (; x < lb;) {
+  for (; x < lb; ) {
     bx0 = b.charCodeAt(offset + (d0 = x));
     dd = ++x;
     for (y = 0; y < len; y += 2) {
@@ -217,22 +235,29 @@ function censor(src) {
   // todo You can replace spaces in the source string with "", but you should somehow keep track of the original
   //  __range__ in the src that was occupied by the filtered string
   const censorData = [];
-  let i = 0, realStr = '', tmpStr = '';
+  let i = 0,
+    realStr = "",
+    tmpStr = "";
 
-  ['cyr', 'lat'].forEach(type => {
+  ["cyr", "lat"].forEach((type) => {
     realStr = src.slice().toLowerCase();
-    Object.entries(censorCharmap[type]).forEach(([realLetter, replacementList]) => {
-      replacementList.forEach(replacement => {
-        // todo Keep note of how many extra symbols this specific replacement inserted and make use of it below
-        //  in the badWords.forEach(...) cycle
-        for (i = 0; i < src.length; i += 1) realStr = realStr.replaceAll(replacement, realLetter);
-      });
-    });
-    badWords[type].forEach(word => {
-      for (i = 0; i <= (realStr.length - word.length); i += 1) {
+    Object.entries(censorCharmap[type]).forEach(
+      ([realLetter, replacementList]) => {
+        replacementList.forEach((replacement) => {
+          // todo Keep note of how many extra symbols this specific replacement inserted and make use of it below
+          //  in the badWords.forEach(...) cycle
+          for (i = 0; i < src.length; i += 1)
+            realStr = realStr.replaceAll(replacement, realLetter);
+        });
+      },
+    );
+    badWords[type].forEach((word) => {
+      for (i = 0; i <= realStr.length - word.length; i += 1) {
         tmpStr = realStr.slice(i, i + word.length);
-        if (distance(tmpStr, word) <= (word.length * 0.25)) {
-          log(`[filter] Found word "${word}" as "${tmpStr}" in string "${src}"`);
+        if (distance(tmpStr, word) <= word.length * 0.25) {
+          log(
+            `[filter] Found word "${word}" as "${tmpStr}" in string "${src}"`,
+          );
           censorData.push([i, i + word.length]);
         }
       }
@@ -241,7 +266,10 @@ function censor(src) {
 
   tmpStr = src.slice();
   censorData.forEach(([strStart, strEnd]) => {
-    tmpStr = tmpStr.slice(0, strStart) + getRndString(strEnd - strStart) + tmpStr.slice(strEnd);
+    tmpStr =
+      tmpStr.slice(0, strStart) +
+      getRndString(strEnd - strStart) +
+      tmpStr.slice(strEnd);
   });
   return tmpStr;
 }
@@ -437,7 +465,9 @@ function getTgGameLink(client, gameData) {
   //     "\\*".repeat(censoredString.length),
   //   );
   // });
-  return `<a href="${M.redirectHost}:${M.redirectPort}/r?s=${client.host}&p=${client.port}&g=${gameData.id}">${censor(gameData.name.slice())}</a> (${gameData.mode})`;
+  return `<a href="${M.redirectHost}:${M.redirectPort}/r?s=${client.host}&p=${
+    client.port
+  }&g=${gameData.id}">${censor(gameData.name.slice())}</a> (${gameData.mode})`;
 }
 // </editor-fold>
 
@@ -498,8 +528,17 @@ async function init() {
     M,
     JSON.parse(readFileSync(configPath, { encoding: "utf8", flag: "r" })),
   );
-  badWords.lat.push(...readFileSync(badWordsLatinPath, { encoding: "utf8", flag: "r" }).split('\n'));
-  badWords.cyr.push(...readFileSync(badWordsCyrillicPath, { encoding: "utf8", flag: "r" }).split('\n'));
+  badWords.lat.push(
+    ...readFileSync(badWordsLatinPath, { encoding: "utf8", flag: "r" }).split(
+      "\n",
+    ),
+  );
+  badWords.cyr.push(
+    ...readFileSync(badWordsCyrillicPath, {
+      encoding: "utf8",
+      flag: "r",
+    }).split("\n"),
+  );
 
   webServer = createServer(redirectServerOptions, redirectReqListener);
   webServer.listen(M.redirectPort);
