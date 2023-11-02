@@ -41,4 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Usage of an HTTP server to create redirect links that Telegram considers valid to a different URL formed using Steam Browser Protocol, which allows to start up the game and put players immediately into specific game (without the need for players to type server address and port and select a game themselves).
 - Simple censoring of Russian swear language.
 
+[0.1.3]: https://github.com/Aidoneus/Membrane/releases/tag/v0.1.3
+[0.1.2]: https://github.com/Aidoneus/Membrane/releases/tag/v0.1.2
+[0.1.1]: https://github.com/Aidoneus/Membrane/releases/tag/v0.1.1
 [0.1.0]: https://github.com/Aidoneus/Membrane/releases/tag/v0.1.0
