@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.3] - 2023-10-25
+
+### Changed
+
+- Replaced word distance function for censoring with more efficient one.
+- Moved the word distance sensitity threshold to configuration file to the `censorSensitivity` field.
+- Decreased default word distance sensitivity from 25% to 20%.
+- Decreased default Vangers servers' polling frequency from 10 seconds to 5 minutes.
+
 ## [0.1.2] - 2023-09-23
 
 ### Changed

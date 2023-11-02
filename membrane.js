@@ -151,83 +151,30 @@ function getRndString(length) {
 
 // Based on:
 // https://habr.com/ru/sandbox/145868/
-// https://github.com/gustf/js-levenshtein
 // https://github.com/bars38/Russian_ban_words
 // https://code.google.com/archive/p/badwordslist/downloads
-function distanceMin(d0, d1, d2, bx, ay) {
-  return d0 < d1 || d2 < d1
-    ? d0 > d2
-      ? d2 + 1
-      : d0 + 1
-    : bx === ay
-    ? d1
-    : d1 + 1;
-}
 function distance(a, b) {
-  if (a === b) return 0;
-  if (a.length > b.length) [a, b] = [b, a];
-  let la = a.length,
-    lb = b.length,
-    offset = 0,
-    vector = [],
-    x = 0,
-    y,
-    d0,
-    d1,
-    d2,
-    d3,
-    dd,
-    dy,
-    ay,
-    bx0,
-    bx1,
-    bx2,
-    bx3;
-  while (la > 0 && a[la - 1] === b[lb - 1]) {
-    la--;
-    lb--;
-  }
-  while (offset < la && a[offset] === b[offset]) offset++;
-  la -= offset;
-  lb -= offset;
-  if (la === 0 || lb < 3) return lb;
-  for (y = 0; y < la; y++) {
-    vector.push(y + 1);
-    vector.push(a.charCodeAt(offset + y));
-  }
-  const len = vector.length - 1;
-  for (; x < lb - 3; ) {
-    bx0 = b.charCodeAt(offset + (d0 = x));
-    bx1 = b.charCodeAt(offset + (d1 = x + 1));
-    bx2 = b.charCodeAt(offset + (d2 = x + 2));
-    bx3 = b.charCodeAt(offset + (d3 = x + 3));
-    dd = x += 4;
-    for (y = 0; y < len; y += 2) {
-      dy = vector[y];
-      ay = vector[y + 1];
-      d0 = distanceMin(dy, d0, d1, bx0, ay);
-      d1 = distanceMin(d0, d1, d2, bx1, ay);
-      d2 = distanceMin(d1, d2, d3, bx2, ay);
-      dd = distanceMin(d2, d3, dd, bx3, ay);
-      vector[y] = dd;
-      d3 = d2;
-      d2 = d1;
-      d1 = d0;
-      d0 = dy;
+  const m = a.length,
+    n = b.length,
+    d = [[], []],
+    c = [0, 0, 0];
+  let i = 0,
+    j = 0,
+    r1 = 0,
+    r2 = 1;
+  for (j = 0; j <= n; j++) d[1][j] = j;
+  for (i = 1; i <= m; i++) {
+    r1 = +!r1;
+    r2 = +!r2;
+    d[r2][0] = i;
+    for (j = 1; j <= n; j++) {
+      c[0] = d[r1][j] + 1;
+      c[1] = d[r2][j - 1] + 1;
+      c[2] = d[r1][j - 1] + (a[i - 1] == b[j - 1] ? 0 : 1);
+      d[r2][j] = Math.min(c[0], c[1], c[2]);
     }
   }
-
-  for (; x < lb; ) {
-    bx0 = b.charCodeAt(offset + (d0 = x));
-    dd = ++x;
-    for (y = 0; y < len; y += 2) {
-      dy = vector[y];
-      vector[y] = dd = distanceMin(dy, d0, dd, bx0, vector[y + 1]);
-      d0 = dy;
-    }
-  }
-
-  return dd;
+  return d[r2][n];
 }
 function censor(src) {
   // todo Due to possible usage of one symbol as a replacement for multiple different ones there should be a way
@@ -254,7 +201,7 @@ function censor(src) {
     badWords[type].forEach((word) => {
       for (i = 0; i <= realStr.length - word.length; i += 1) {
         tmpStr = realStr.slice(i, i + word.length);
-        if (distance(tmpStr, word) <= word.length * 0.25) {
+        if (distance(tmpStr, word) <= word.length * M.censorSensitivity) {
           log(
             `[filter] Found word "${word}" as "${tmpStr}" in string "${src}"`,
           );
