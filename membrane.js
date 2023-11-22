@@ -325,7 +325,6 @@ async function receiveGames(clientKey, dataBuffer, pos) {
       gameName.push(dataBuffer[pos]);
       pos += 1;
     }
-    pos += 1; // terminating zero
     tmpName = decodeArray(gameName);
     tmpName = tmpName.split(" ");
     games[id] = {
