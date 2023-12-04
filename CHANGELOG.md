@@ -16,10 +16,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Replaced word distance function for censoring with more efficient one.
-- Moved the word distance sensitity threshold to configuration file to the `censorSensitivity` field.
-- Decreased default word distance sensitivity from 25% to 20%.
-- Decreased default Vangers servers' polling frequency from 10 seconds to 5 minutes.
 - Minor change to Telegram message templates.
 - `gameRequestTimeout` in the sample config is set back to its old value due to new `gameRequestCooldown` having the value of 5 minutes.
 
