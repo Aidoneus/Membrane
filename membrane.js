@@ -23,8 +23,12 @@ const { Socket } = require("net"),
   argSilent = argsI[2] >= 0 || argsI[3] >= 0,
   M = {},
   configPath = dir + "/membrane.json",
+  // Based on https://code.google.com/archive/p/badwordslist/downloads
   badWordsLatinPath = dir + "/bad_words_latin.txt",
+  // Based on https://github.com/bars38/Russian_ban_words
   badWordsCyrillicPath = dir + "/bad_words_cyrillic.txt",
+  exceptionsLatinPath = dir + "/exceptions_latin.txt",
+  exceptionsCyrillicPath = dir + "/exceptions_cyrillic.txt",
   cp866 = `АБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдежзийклмноп${" ".repeat(
     48,
   )}рстуфхцчшщъыьэюяЁё${" ".repeat(14)}`,
@@ -41,6 +45,7 @@ const { Socket } = require("net"),
     (clientKey, dataString, dataLength, code) => dataLength && code === 0xc1,
   ],
   badWords = { cyr: [], lat: [] },
+  exceptionWords = { cyr: [], lat: [] },
   censorCharmap = {
     lat: {
       a: ["a", "а", "@"],
@@ -116,7 +121,25 @@ let webServer;
 
 // <editor-fold desc="String functions">
 function log(...a) {
-  !argSilent && console.log(...a);
+  if (argSilent) return;
+  const date = new Date(),
+    msg = [
+      "FullYear",
+      "Month",
+      "Date",
+      "Hours",
+      "Minutes",
+      "Seconds",
+      "Milliseconds",
+    ]
+      .map((m, i) =>
+        (date[`getUTC${m}`]() + (i === 1 ? 1 : 0))
+          .toString(10)
+          .padStart(!i || i === 6 ? 4 : 2, "0"),
+      )
+      .reduce((p, c, i) => p + c + ".. ::: "[i], "");
+
+  console.log(msg, ...a);
 }
 
 function encodeChar(char) {
@@ -149,10 +172,6 @@ function getRndString(length) {
   return result;
 }
 
-// Based on:
-// https://habr.com/ru/sandbox/145868/
-// https://github.com/bars38/Russian_ban_words
-// https://code.google.com/archive/p/badwordslist/downloads
 function distance(a, b) {
   const m = a.length,
     n = b.length,
@@ -176,18 +195,41 @@ function distance(a, b) {
   }
   return d[r2][n];
 }
+
+// Based on: https://habr.com/ru/sandbox/145868/
 function censor(src) {
   // todo Due to possible usage of one symbol as a replacement for multiple different ones there should be a way
   //  to form alternate possible strings with different __order__ of replacements
   // todo You can replace spaces in the source string with "", but you should somehow keep track of the original
   //  __range__ in the src that was occupied by the filtered string
-  const censorData = [];
+  const censorData = [],
+    exceptionData = [];
   let i = 0,
     realStr = "",
-    tmpStr = "";
+    tmpStr = "",
+    tmpWord = "";
 
   ["cyr", "lat"].forEach((type) => {
     realStr = src.slice().toLowerCase();
+    exceptionWords[type].forEach((word) => {
+      tmpWord = word.toLowerCase();
+      for (i = 0; i <= realStr.length - word.length; i += 1) {
+        tmpStr = realStr.slice(i, i + word.length);
+        if (
+          distance(tmpStr, tmpWord) <=
+          tmpWord.length * M.exceptionSensitivity
+        ) {
+          log(
+            `[filter exception] Found word "${word}" as "${tmpStr}" in string "${src}"`,
+          );
+          exceptionData.push([i, src.slice(i, i + word.length)]);
+          realStr =
+            realStr.slice(0, i) +
+            " ".repeat(word.length) +
+            realStr.slice(i + word.length);
+        }
+      }
+    });
     Object.entries(censorCharmap[type]).forEach(
       ([realLetter, replacementList]) => {
         replacementList.forEach((replacement) => {
@@ -199,11 +241,12 @@ function censor(src) {
       },
     );
     badWords[type].forEach((word) => {
+      tmpWord = word.toLowerCase();
       for (i = 0; i <= realStr.length - word.length; i += 1) {
         tmpStr = realStr.slice(i, i + word.length);
-        if (distance(tmpStr, word) <= word.length * M.censorSensitivity) {
+        if (distance(tmpStr, tmpWord) <= tmpWord.length * M.censorSensitivity) {
           log(
-            `[filter] Found word "${word}" as "${tmpStr}" in string "${src}"`,
+            `[filter censor] Found word "${word}" as "${tmpStr}" in string "${src}"`,
           );
           censorData.push([i, i + word.length]);
         }
@@ -218,6 +261,11 @@ function censor(src) {
       getRndString(strEnd - strStart) +
       tmpStr.slice(strEnd);
   });
+  exceptionData.forEach(([strStart, str]) => {
+    tmpStr =
+      tmpStr.slice(0, strStart) + str + tmpStr.slice(strStart + str.length);
+  });
+
   return tmpStr;
 }
 // </editor-fold>
@@ -349,11 +397,11 @@ async function receiveGames(clientKey, dataBuffer, pos) {
       M.tgChats[0],
       (newGames.length > 1
         ? `Созданы новые игры:${newGames.reduce(
-            (acc, gameData) => "\n" + getTgGameLink(client, gameData),
+            (acc, gameData) => acc + "\n" + getTgGameLink(client, gameData),
             "",
           )}`
         : `Создана новая игра: ${getTgGameLink(client, newGames[0])}`) +
-        `\n\nНажмите на название игры, чтобы присоединиться к ней (требуется установленная из Steam игра)`,
+        `\n\nНажмите по названию игры, чтобы присоединиться к ней (требуется установленная из Steam игра)`,
     );
 
   client.games = games;
@@ -361,7 +409,7 @@ async function receiveGames(clientKey, dataBuffer, pos) {
   globalThis.clearTimeout(client.lastTimeout);
   client.lastTimeout = globalThis.setTimeout(
     () => requestGames(clientKey),
-    M.gameRequestTimeout,
+    newGames.length ? M.gameRequestCooldown : M.gameRequestTimeout,
   );
 }
 // </editor-fold>
@@ -402,15 +450,6 @@ function receiveTgResponse(response) {
 }
 
 function getTgGameLink(client, gameData) {
-  // Commented out for now as telegram does not support links with Steam browser protocol atm
-  // return `[${gameData.name}](steam://run/264080//\-server ${client.host} \-port ${client.port} \-game ${gameData.id}/) \\(${gameData.mode}\\)`;
-  // let censoredName = gameData.name.slice();
-  // [...gameData.name.matchAll(censorRegExp)].forEach(([censoredString]) => {
-  //   censoredName = censoredName.replace(
-  //     censoredString,
-  //     "\\*".repeat(censoredString.length),
-  //   );
-  // });
   return `<a href="${M.redirectHost}:${M.redirectPort}/r?s=${client.host}&p=${
     client.port
   }&g=${gameData.id}">${censor(gameData.name.slice())}</a> (${gameData.mode})`;
@@ -458,18 +497,34 @@ async function init() {
     process.exit(0);
   }
 
-  if (!existsSync(configPath)) {
-    log(`Configuration file ${configPath} was not found, aborting`);
-    process.exit(1);
-  }
-  if (!existsSync(badWordsLatinPath)) {
-    log(`Bad words file ${badWordsLatinPath} was not found, aborting`);
-    process.exit(1);
-  }
-  if (!existsSync(badWordsCyrillicPath)) {
-    log(`Bad words file ${badWordsCyrillicPath} was not found, aborting`);
-    process.exit(1);
-  }
+  [
+    [
+      existsSync(configPath),
+      `Configuration file ${configPath} was not found, aborting`,
+    ],
+    [
+      existsSync(badWordsLatinPath),
+      `Bad words file ${badWordsLatinPath} was not found, aborting`,
+    ],
+    [
+      existsSync(badWordsCyrillicPath),
+      `Bad words file ${badWordsCyrillicPath} was not found, aborting`,
+    ],
+    [
+      existsSync(exceptionsLatinPath),
+      `Exception words file ${exceptionsLatinPath} was not found, aborting`,
+    ],
+    [
+      existsSync(exceptionsCyrillicPath),
+      `Exception words file ${exceptionsCyrillicPath} was not found, aborting`,
+    ],
+  ].forEach((doesExist, errorMessage) => {
+    if (!doesExist) {
+      log(errorMessage);
+      process.exit(1);
+    }
+  });
+
   Object.assign(
     M,
     JSON.parse(readFileSync(configPath, { encoding: "utf8", flag: "r" })),
@@ -481,6 +536,17 @@ async function init() {
   );
   badWords.cyr.push(
     ...readFileSync(badWordsCyrillicPath, {
+      encoding: "utf8",
+      flag: "r",
+    }).split("\n"),
+  );
+  exceptionWords.lat.push(
+    ...readFileSync(exceptionsLatinPath, { encoding: "utf8", flag: "r" }).split(
+      "\n",
+    ),
+  );
+  exceptionWords.cyr.push(
+    ...readFileSync(exceptionsCyrillicPath, {
       encoding: "utf8",
       flag: "r",
     }).split("\n"),

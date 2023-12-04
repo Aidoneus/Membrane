@@ -38,7 +38,8 @@
     }
   ],
   "reconnectTimeout": 600000,
-  "gameRequestTimeout": 300000,
+  "gameRequestTimeout": 10000,
+  "gameRequestCooldown": 300000,
   "gameModes": [
     "Ван-Вар",
     "Мехосома",
@@ -53,5 +54,6 @@
   "tgChats": [],
   "redirectHost": "your.domain.com",
   "redirectPort": 38383,
-  "censorSensitivity": 0.2
+  "censorSensitivity": 0.2,
+  "exceptionSensitivity": 0.1
 }

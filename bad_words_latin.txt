@@ -457,3 +457,5 @@ wichser
 wop
 yed
 zabourah
+dic
+kok

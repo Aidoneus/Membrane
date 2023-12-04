@@ -5,12 +5,41 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.1.3] - 2023-10-25
+## [0.1.4] - 2023-12-04
+
+### Added
+
+- Logs are now timestamped.
+- Minor additions to `bad_words_cyrillic.txt` and `bad_words_latin.txt`.
+- Added dictionaries with "exception" words (game terms for now) which are prioritized over "bad" words.
+- Waiting time period after polling now differs depending on whether new games were found.
 
 ### Changed
 
 - Replaced word distance function for censoring with more efficient one.
 - Moved the word distance sensitity threshold to configuration file to the `censorSensitivity` field.
+- Decreased default word distance sensitivity from 25% to 20%.
+- Decreased default Vangers servers' polling frequency from 10 seconds to 5 minutes.
+- Minor change to Telegram message templates.
+- `gameRequestTimeout` in the sample config is set back to its old value due to new `gameRequestCooldown` having the value of 5 minutes.
+
+### Fixed
+
+- Occasional cutting of game names in `receiveGames(...)`.
+- Skipping all games except the last one when sending Telegram message about more than 1 game being created between checks.
+- Potential candidate word for censoring was not forced to the same case as in the transformed source string.
+
+### Removed
+
+- TODO file due to existence of more detailed to-do list in my own notes.
+- Some unneeded comments.
+
+## [0.1.3] - 2023-10-25
+
+### Changed
+
+- Replaced word distance function for censoring with more efficient one.
+- Moved the word distance sensitivity threshold to configuration file to the `censorSensitivity` field.
 - Decreased default word distance sensitivity from 25% to 20%.
 - Decreased default Vangers servers' polling frequency from 10 seconds to 5 minutes.
 
@@ -41,6 +70,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Usage of an HTTP server to create redirect links that Telegram considers valid to a different URL formed using Steam Browser Protocol, which allows to start up the game and put players immediately into specific game (without the need for players to type server address and port and select a game themselves).
 - Simple censoring of Russian swear language.
 
+[0.1.4]: https://github.com/Aidoneus/Membrane/releases/tag/v0.1.4
 [0.1.3]: https://github.com/Aidoneus/Membrane/releases/tag/v0.1.3
 [0.1.2]: https://github.com/Aidoneus/Membrane/releases/tag/v0.1.2
 [0.1.1]: https://github.com/Aidoneus/Membrane/releases/tag/v0.1.1
