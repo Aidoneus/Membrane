@@ -1,6 +1,7 @@
 # Custom build script and its temporary files
 build
 build.terser
+membrane.js.mangle
 
 # Configuration file for the script
 membrane.json

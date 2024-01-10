@@ -4,6 +4,30 @@
  */
 "use strict";
 
+/**
+ * @typedef {Object} VangersGame
+ * @property {number} [id]
+ * @property {string} name - Displayed name of the game
+ * @property {number} players - Number of players currently in the game
+ * @property {string} mode - Localized name of the game mode
+ * @property {number} time - Lifetime of the game in seconds
+ * @property {boolean} isNew - `true` if this game was not present during in
+ * the previous Vangers server's response to `requestGames(...)`
+ */
+
+/**
+ * @typedef {Object} VangersUpperLevelClient
+ * @property {Socket} client
+ * @property {string} host
+ * @property {number} port
+ * @property {number} type
+ * @property {number} protocol
+ * @property {Object.<string, VangersGame>} games
+ * @property {(null|number)} lastTimeout
+ * @property {boolean} alive
+ * @property {boolean} gamesRead
+ */
+
 const { Socket } = require("net"),
   { request /*createServerS as createServer*/ } = require("https"),
   { createServer } = require("http"),
@@ -21,6 +45,24 @@ const { Socket } = require("net"),
   ],
   argHelp = argsI[0] >= 0 || argsI[1] >= 0,
   argSilent = argsI[2] >= 0 || argsI[3] >= 0,
+  /**
+   * @type {Object}
+   * @property {Object.<string, number>} types
+   * @property {{host: string, port: number, type: number, protocol: string}[]} servers
+   * @property {number} reconnectTimeout
+   * @property {number} gameRequestTimeout
+   * @property {number} gameRequestCooldown
+   * @property {string[]} gameModes
+   * @property {string[]} gameLetters
+   * @property {string} tgToken
+   * @property {number} tgPort
+   * @property {number} tgSendTimeout
+   * @property {number[]} tgChats
+   * @property {string} redirectHost
+   * @property {number} redirectPort
+   * @property {number} censorSensitivity
+   * @property {number} exceptionSensitivity
+   */
   M = {},
   configPath = dir + "/membrane.json",
   // Based on https://code.google.com/archive/p/badwordslist/downloads
@@ -30,22 +72,40 @@ const { Socket } = require("net"),
   exceptionsLatinPath = dir + "/exceptions_latin.txt",
   exceptionsCyrillicPath = dir + "/exceptions_cyrillic.txt",
   cp866 = `АБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдежзийклмноп${" ".repeat(
-    48,
+    48
   )}рстуфхцчшщъыьэюяЁё${" ".repeat(14)}`,
+  /**
+   * @type {Map<string, VangersUpperLevelClient>}
+   */
   clientPool = new Map(),
+  /**
+   * @type {((function(string, (Buffer|string), number): Promise<void>)|function(string, (Buffer|string), number))[]}
+   */
   reactions = [
     () => {}, // Default reaction to anything else, e.g. clientKey => { doSomething(); },
     handshake,
     receiveGames,
   ],
+  /**
+   * @type {(function(string, string, number, number): boolean)[]}
+   */
   conditions = [
     (clientKey, dataString, dataLength, code) =>
       dataString ===
       `Enter, my son, please...\x00${clientPool.get(clientKey).protocol}`,
     (clientKey, dataString, dataLength, code) => dataLength && code === 0xc1,
   ],
+  /**
+   * @type {{cyr: string[], lat: string[]}}
+   */
   badWords = { cyr: [], lat: [] },
+  /**
+   * @type {{cyr: string[], lat: string[]}}
+   */
   exceptionWords = { cyr: [], lat: [] },
+  /**
+   * @type {{cyr: Object.<string, string>, lat: Object.<string, string>}}
+   */
   censorCharmap = {
     lat: {
       a: ["a", "а", "@"],
@@ -111,15 +171,22 @@ const { Socket } = require("net"),
       я: ["я" /*, 'ya'*/, "r"],
     },
   },
-  tgStack = [],
+  //tgStack = [],
   redirectServerOptions = {
     /* no specific options for now */
   };
 
+/**
+ * @type {Server}
+ */
 let webServer;
 // </editor-fold>
 
 // <editor-fold desc="String functions">
+/**
+ * Function used for default output.
+ * @param a - The same arguments one would pass to `console.log(...)`
+ */
 function log(...a) {
   if (argSilent) return;
   const date = new Date(),
@@ -133,37 +200,66 @@ function log(...a) {
       "Milliseconds",
     ]
       .map((m, i) =>
-        (date[`getUTC${m}`]() + (i === 1 ? 1 : 0))
-          .toString(10)
-          .padStart(!i || i === 6 ? 4 : 2, "0"),
+        pad(date[`getUTC${m}`]() + (i === 1 ? 1 : 0), !i || i === 6 ? 4 : 2)
       )
       .reduce((p, c, i) => p + c + ".. ::: "[i], "");
 
   console.log(msg, ...a);
 }
 
+/**
+ * Encode a single character to CP-866.
+ * @param {string} char
+ * @return {number} - CP-866 byte
+ */
 function encodeChar(char) {
   if (char === " ") return 32;
   const i = cp866.indexOf(char);
   return !~char ? char.charCodeAt(0) : i + 128;
 }
 
+/**
+ * Decode a single CP-866 byte to character.
+ * @param {number} code - CP-866 byte
+ * @return {string}
+ */
 function decodeChar(code) {
   return code < 128 ? String.fromCharCode(code) : cp866[code - 128];
 }
 
+/**
+ * Encode a string to CP-866.
+ * @param {string} charString
+ * @return {number[]} - CP-866 bytes
+ */
 function encodeString(charString) {
   return Array.prototype.map.call(charString, (char) => encodeChar(char));
 }
 
+/**
+ * Decode an array of CP-866 bytes to string.
+ * @param {number[]} codeArray
+ * @return {string}
+ */
 function decodeArray(codeArray) {
   return codeArray.reduce((str, code) => str + decodeChar(code), "");
 }
 
+/**
+ * Converts a number to string and pads its with zeroes (useful in formatting output).
+ * @param {number} value
+ * @param {number} length
+ * @return {string}
+ */
 function pad(value, length = 2) {
   return value.toString(10).padStart(length, "0");
 }
 
+/**
+ * Generates a string of specified length with random rectangles.
+ * @param {number} length
+ * @return {string}
+ */
 function getRndString(length) {
   let result = "";
   for (let i = 0; i < length; i += 1) {
@@ -172,6 +268,13 @@ function getRndString(length) {
   return result;
 }
 
+/**
+ * Wagner-Fischer algorithm implementation for calculating the Levenshtein
+ * distance with some optimizations.
+ * @param {string} a
+ * @param {string} b
+ * @return {number}
+ */
 function distance(a, b) {
   const m = a.length,
     n = b.length,
@@ -189,19 +292,26 @@ function distance(a, b) {
     for (j = 1; j <= n; j++) {
       c[0] = d[r1][j] + 1;
       c[1] = d[r2][j - 1] + 1;
-      c[2] = d[r1][j - 1] + (a[i - 1] == b[j - 1] ? 0 : 1);
+      c[2] = d[r1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1);
       d[r2][j] = Math.min(c[0], c[1], c[2]);
     }
   }
   return d[r2][n];
 }
 
-// Based on: https://habr.com/ru/sandbox/145868/
+/**
+ * Filters inappropriate words according to global dictionaries.<br>
+ * Based on: https://habr.com/ru/sandbox/145868/
+ * @param {string} src
+ * @return {string}
+ */
 function censor(src) {
-  // todo Due to possible usage of one symbol as a replacement for multiple different ones there should be a way
-  //  to form alternate possible strings with different __order__ of replacements
-  // todo You can replace spaces in the source string with "", but you should somehow keep track of the original
-  //  __range__ in the src that was occupied by the filtered string
+  // todo Due to possible usage of one symbol as a replacement for multiple
+  //  different ones there should be a way to form alternate possible strings
+  //  with different __order__ of replacements
+  // todo You can replace spaces in the source string with "", but you should
+  //  somehow keep track of the original __range__ in the src that was occupied
+  //  by the filtered string
   const censorData = [],
     exceptionData = [];
   let i = 0,
@@ -220,7 +330,7 @@ function censor(src) {
           tmpWord.length * M.exceptionSensitivity
         ) {
           log(
-            `[filter exception] Found word "${word}" as "${tmpStr}" in string "${src}"`,
+            `[filter exception] Found word "${word}" as "${tmpStr}" in string "${src}"`
           );
           exceptionData.push([i, src.slice(i, i + word.length)]);
           realStr =
@@ -233,12 +343,12 @@ function censor(src) {
     Object.entries(censorCharmap[type]).forEach(
       ([realLetter, replacementList]) => {
         replacementList.forEach((replacement) => {
-          // todo Keep note of how many extra symbols this specific replacement inserted and make use of it below
-          //  in the badWords.forEach(...) cycle
+          // todo Keep note of how many extra symbols this specific replacement
+          //  inserted and make use of it below in the badWords.forEach(...) cycle
           for (i = 0; i < src.length; i += 1)
             realStr = realStr.replaceAll(replacement, realLetter);
         });
-      },
+      }
     );
     badWords[type].forEach((word) => {
       tmpWord = word.toLowerCase();
@@ -246,7 +356,7 @@ function censor(src) {
         tmpStr = realStr.slice(i, i + word.length);
         if (distance(tmpStr, tmpWord) <= tmpWord.length * M.censorSensitivity) {
           log(
-            `[filter censor] Found word "${word}" as "${tmpStr}" in string "${src}"`,
+            `[filter censor] Found word "${word}" as "${tmpStr}" in string "${src}"`
           );
           censorData.push([i, i + word.length]);
         }
@@ -270,7 +380,36 @@ function censor(src) {
 }
 // </editor-fold>
 
+// <editor-fold desc="File functions">
+/**
+ * Reads the text file from the `fp` path and splits it by linebreaks into array.
+ * @param {string} fp
+ * @return {string[]}
+ */
+function readArray(fp) {
+  return readFileSync(fp, { encoding: "utf8", flag: "r" }).split("\n");
+}
+
+/**
+ * Reads the text file from the `fp` path and parses it as JSON.
+ * @param {string} fp
+ * @return {Object}
+ */
+function readJson(fp) {
+  return JSON.parse(readFileSync(fp, { encoding: "utf8", flag: "r" }));
+}
+// </editor-fold>
+
 // <editor-fold desc="Vangers network functions">
+/**
+ * Initializes a socket, fills corresponding data and setups the lifecycle for
+ * a connection to a Vangers server.
+ * @param {string} clientKey
+ * @param {string} host
+ * @param {number} port
+ * @param {number} type
+ * @param {number} protocol
+ */
 function initClient(clientKey, { host, port, type, protocol }) {
   if (clientPool.get(clientKey)?.alive) return;
   log(`[${clientKey}] initClient`);
@@ -298,7 +437,7 @@ function initClient(clientKey, { host, port, type, protocol }) {
     }
     reactions[
       conditions.findIndex(
-        (c) => !!c(clientKey, dataString, dataLength, code),
+        (c) => !!c(clientKey, dataString, dataLength, code)
       ) + 1
     ](clientKey, dataBuffer, pos);
   });
@@ -314,18 +453,22 @@ function initClient(clientKey, { host, port, type, protocol }) {
     log(
       `[${clientKey}] connection closed, try again in ${
         M.reconnectTimeout / 1000 / 60
-      } min`,
+      } min`
     );
     clientPool.get(clientKey).alive = false;
     globalThis.clearTimeout(clientPool.get(clientKey).lastTimeout);
     clientPool.get(clientKey).lastTimeout = globalThis.setTimeout(
       () => initClient(clientKey, { host, port, type, protocol }),
-      M.reconnectTimeout,
+      M.reconnectTimeout
     );
   });
   connect(clientKey);
 }
 
+/**
+ * Connect to a Vangers server.
+ * @param {string} clientKey
+ */
 function connect(clientKey) {
   const { port, host, protocol, client } = clientPool.get(clientKey);
   client.connect(port, host, () => {
@@ -333,35 +476,73 @@ function connect(clientKey) {
   });
 }
 
+/**
+ * Disconnect from a Vangers server.
+ * @param clientKey
+ */
 function disconnect(clientKey) {
   send(clientKey, 0x86, Buffer.alloc(0));
   clientPool.get(clientKey).client.destroy();
 }
 
+/**
+ * Sends the packet to a Vangers server.
+ * @param {string} clientKey
+ * @param {number} code
+ * @param {Buffer} dataBuffer
+ */
 function send(clientKey, code, dataBuffer) {
   const lengthBuffer = Buffer.alloc(2);
   lengthBuffer.writeInt16LE(1 + dataBuffer.length); // 1 = code buffer's length
   clientPool
     .get(clientKey)
     .client.write(
-      Buffer.concat([lengthBuffer, Buffer.from([code]), dataBuffer]),
+      Buffer.concat([lengthBuffer, Buffer.from([code]), dataBuffer])
     );
 }
 
+/**
+ * Reaction to successfully connecting to a Vangers server.
+ * @param clientKey
+ * @return {Promise<void>}
+ */
 async function handshake(clientKey) {
   log(`[${clientKey}] handshake`);
   requestGames(clientKey);
 }
 
+/**
+ * Send request to a Vangers server for the list of current games.
+ * @param {string} clientKey
+ */
 function requestGames(clientKey) {
   send(clientKey, 0x81, Buffer.alloc(0));
 }
 
+/**
+ * Reaction to successfully receiving the list of current games.
+ * @param {string} clientKey
+ * @param {Buffer|string} dataBuffer
+ * @param {number} pos
+ * @return {Promise<void>}
+ */
 async function receiveGames(clientKey, dataBuffer, pos) {
-  const games = {},
+  const /**
+     * @type {Object.<string, VangersGame>}
+     */
+    games = {},
     gamesCount = dataBuffer.readUInt8(pos),
+    /**
+     * @type {VangersUpperLevelClient}
+     */
     client = clientPool.get(clientKey),
+    /**
+     * @type {Object.<string, VangersGame>}
+     */
     oldGames = client.games,
+    /**
+     * @type {VangersGame[]}
+     */
     newGames = [];
   let gameIndex = 0;
   while (pos < dataBuffer.length && gameIndex < gamesCount) {
@@ -380,9 +561,15 @@ async function receiveGames(clientKey, dataBuffer, pos) {
         .filter((e, i) => i < tmpName.length - 3)
         .join(" ")
         .slice(0, -1),
-      players: tmpName[tmpName.length - 3],
+      players: Number.parseInt(tmpName[tmpName.length - 3], 10),
       mode: M.gameModes[M.gameLetters.indexOf(tmpName[tmpName.length - 2])],
-      time: tmpName[tmpName.length - 1],
+      // todo Use both the time told by server and time measured by Membrane
+      //  to approximate a more realistic lifetime of a game, that'd allow
+      //  to resume tracking lifetime of games after Membrane restarts
+      // in seconds
+      time: tmpName[tmpName.length - 1]
+        .split(":")
+        .reduce((a, c, i) => a + c * [3600, 60, 1][i], 0),
       isNew: !client.gamesRead ? false : !oldGames[id],
     };
     gameIndex += 1;
@@ -398,10 +585,10 @@ async function receiveGames(clientKey, dataBuffer, pos) {
       (newGames.length > 1
         ? `Созданы новые игры:${newGames.reduce(
             (acc, gameData) => acc + "\n" + getTgGameLink(client, gameData),
-            "",
+            ""
           )}`
         : `Создана новая игра: ${getTgGameLink(client, newGames[0])}`) +
-        `\n\nНажмите по названию игры, чтобы присоединиться к ней (требуется установленная из Steam игра)`,
+        `\n\nНажмите по названию игры, чтобы присоединиться к ней (требуется установленная из Steam игра)`
     );
 
   client.games = games;
@@ -409,12 +596,20 @@ async function receiveGames(clientKey, dataBuffer, pos) {
   globalThis.clearTimeout(client.lastTimeout);
   client.lastTimeout = globalThis.setTimeout(
     () => requestGames(clientKey),
-    newGames.length ? M.gameRequestCooldown : M.gameRequestTimeout,
+    // todo Timeout here should always be the same; "gameRequestCooldown"
+    //  instead needs to be used just for TG messages (above, when
+    //  sendToTgChat(...) is called)
+    newGames.length ? M.gameRequestCooldown : M.gameRequestTimeout
   );
 }
 // </editor-fold>
 
 // <editor-fold desc="Telegram network functions">
+/**
+ * Send a Telegram text message to the specified chat.
+ * @param {number} chatId
+ * @param {string} content
+ */
 function sendToTgChat(chatId, content) {
   log(`[tg] sendToChat ${chatId}: ${content}`);
   const json = JSON.stringify({
@@ -434,12 +629,16 @@ function sendToTgChat(chatId, content) {
           "Content-Type": "application/json",
         },
       },
-      receiveTgResponse,
+      receiveTgResponse
     );
   req.write(json);
   req.end();
 }
 
+/**
+ * Reaction to receiving the text response to a Telegram request.
+ * @param {IncomingMessage} response
+ */
 function receiveTgResponse(response) {
   let data = "";
   response.on("data", (chunk) => (data += chunk));
@@ -449,6 +648,12 @@ function receiveTgResponse(response) {
   });
 }
 
+/**
+ * Form an HTML code for a Vangers game link for latter use in Telegram.
+ * @param {VangersUpperLevelClient} client
+ * @param {VangersGame} gameData
+ * @return {string}
+ */
 function getTgGameLink(client, gameData) {
   return `<a href="${M.redirectHost}:${M.redirectPort}/r?s=${client.host}&p=${
     client.port
@@ -457,6 +662,12 @@ function getTgGameLink(client, gameData) {
 // </editor-fold>
 
 // <editor-fold desc="Redirect server functions">
+/**
+ * Sends a redirect to a URL using Steam browser protocol in response to requests.
+ * @param {IncomingMessage} request
+ * @param {ServerResponse} response
+ * @return {ServerResponse}
+ */
 function redirectReqListener(request, response) {
   const url = decodeURIComponent(request.url);
   if (
@@ -481,6 +692,9 @@ function redirectReqListener(request, response) {
 // </editor-fold>
 
 // <editor-fold desc="Lifecycle">
+/**
+ * Prints a help message describing possible arguments of this script.
+ */
 function printHelp() {
   [
     `Usage: node ${scriptFile} [OPTIONS]`,
@@ -491,6 +705,10 @@ function printHelp() {
   ].forEach((line) => console.log(line));
 }
 
+/**
+ * Initializes this script.
+ * @return {Promise<void>}
+ */
 async function init() {
   if (argHelp) {
     printHelp();
@@ -498,66 +716,30 @@ async function init() {
   }
 
   [
-    [
-      existsSync(configPath),
-      `Configuration file ${configPath} was not found, aborting`,
-    ],
-    [
-      existsSync(badWordsLatinPath),
-      `Bad words file ${badWordsLatinPath} was not found, aborting`,
-    ],
-    [
-      existsSync(badWordsCyrillicPath),
-      `Bad words file ${badWordsCyrillicPath} was not found, aborting`,
-    ],
-    [
-      existsSync(exceptionsLatinPath),
-      `Exception words file ${exceptionsLatinPath} was not found, aborting`,
-    ],
-    [
-      existsSync(exceptionsCyrillicPath),
-      `Exception words file ${exceptionsCyrillicPath} was not found, aborting`,
-    ],
-  ].forEach((doesExist, errorMessage) => {
-    if (!doesExist) {
-      log(errorMessage);
+    [configPath, "Configuration file"],
+    [badWordsLatinPath, "Bad words file"],
+    [badWordsCyrillicPath, "Bad words file"],
+    [exceptionsLatinPath, "Exception words file"],
+    [exceptionsCyrillicPath, "Exception words file"],
+  ].forEach((fp, fn) => {
+    if (!existsSync(fp)) {
+      log(`${fn} ${fp} was not found, aborting`);
       process.exit(1);
     }
   });
 
-  Object.assign(
-    M,
-    JSON.parse(readFileSync(configPath, { encoding: "utf8", flag: "r" })),
-  );
-  badWords.lat.push(
-    ...readFileSync(badWordsLatinPath, { encoding: "utf8", flag: "r" }).split(
-      "\n",
-    ),
-  );
-  badWords.cyr.push(
-    ...readFileSync(badWordsCyrillicPath, {
-      encoding: "utf8",
-      flag: "r",
-    }).split("\n"),
-  );
-  exceptionWords.lat.push(
-    ...readFileSync(exceptionsLatinPath, { encoding: "utf8", flag: "r" }).split(
-      "\n",
-    ),
-  );
-  exceptionWords.cyr.push(
-    ...readFileSync(exceptionsCyrillicPath, {
-      encoding: "utf8",
-      flag: "r",
-    }).split("\n"),
-  );
+  Object.assign(M, readJson(configPath));
+  badWords.lat.push(...readArray(badWordsLatinPath));
+  badWords.cyr.push(...readArray(badWordsCyrillicPath));
+  exceptionWords.lat.push(...readArray(exceptionsLatinPath));
+  exceptionWords.cyr.push(...readArray(exceptionsCyrillicPath));
 
   webServer = createServer(redirectServerOptions, redirectReqListener);
   webServer.listen(M.redirectPort);
 
   // Init pool of connections to Vangers' servers
   M.servers.forEach((serverData) =>
-    initClient(`${serverData.host}:${serverData.port}`, serverData),
+    initClient(`${serverData.host}:${serverData.port}`, serverData)
   );
 }
 
