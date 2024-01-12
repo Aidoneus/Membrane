@@ -1,6 +1,6 @@
 # Membrane
 
-[![code style: prettier](https://img.shields.io/badge/code_style-prettier-ff69b4.svg?style=flat-square)](https://github.com/prettier/prettier)
+[![code style: prettier](https://img.shields.io/badge/code_style-prettier-ff69b4.svg?style=flat-square)](https://github.com/prettier/prettier) [![NodeJS with Webpack](https://github.com/caiiiycuk/Membrane/actions/workflows/webpack.yml/badge.svg)](https://github.com/caiiiycuk/Membrane/actions/workflows/webpack.yml)
 
 [Vangers](https://github.com/KranX/Vangers) multiplayer servers' monitoring and notification tool, integrated with the [Telegram](https://github.com/topics/telegram) messaging app.
 
@@ -28,6 +28,12 @@ Make a copy of the `membrane.json-sample` file and rename it to `membrane.json` 
 - `reconnectTimeout`: milliseconds between trying to connect to a Vangers server after previous attempt was failed (e.g. server is down).
 - `servers`: list of Vangers servers that bot will gather info about. `type` field is used only to customize messages sent to Telegram (i.e. to tell players to download specific modification for some server).
 
+## How to build
+
+1. Install node & npm
+2. Install yarn with `npm install -g yarn`
+2. Install dependencies by calling `yarn`
+3. Build the code with `yarn run webpack` or `yarn run webpack --watch`
 
 
 ## Change log

@@ -28,24 +28,24 @@
  * @property {boolean} gamesRead
  */
 
-const { Socket } = require("net"),
-  { request /*createServerS as createServer*/ } = require("https"),
-  { createServer } = require("http"),
-  { existsSync, readFileSync } = require("fs"),
-  { dirname, basename } = require("path"),
-  // <editor-fold desc="Constants">
-  dir = dirname(__filename),
-  scriptFile = basename(__filename),
-  args = process.argv.slice(2),
-  argsI = [
-    args.indexOf("--help"),
-    args.indexOf("-h"),
-    args.indexOf("--silent"),
-    args.indexOf("-s"),
-  ],
-  argHelp = argsI[0] >= 0 || argsI[1] >= 0,
-  argSilent = argsI[2] >= 0 || argsI[3] >= 0,
-  /**
+const { Socket } = require("net");
+const { request /* createServerS as createServer*/ } = require("https");
+const { createServer } = require("http");
+const { existsSync, readFileSync } = require("fs");
+const { dirname, basename } = require("path");
+// <editor-fold desc="Constants">
+const dir = dirname(__filename);
+const scriptFile = basename(__filename);
+const args = process.argv.slice(2);
+const argsI = [
+  args.indexOf("--help"),
+  args.indexOf("-h"),
+  args.indexOf("--silent"),
+  args.indexOf("-s"),
+];
+const argHelp = argsI[0] >= 0 || argsI[1] >= 0;
+const argSilent = argsI[2] >= 0 || argsI[3] >= 0;
+/**
    * @type {Object}
    * @property {Object.<string, number>} types
    * @property {{host: string, port: number, type: number, protocol: string}[]} servers
@@ -63,118 +63,119 @@ const { Socket } = require("net"),
    * @property {number} censorSensitivity
    * @property {number} exceptionSensitivity
    */
-  M = {},
-  configPath = dir + "/membrane.json",
-  // Based on https://code.google.com/archive/p/badwordslist/downloads
-  badWordsLatinPath = dir + "/bad_words_latin.txt",
-  // Based on https://github.com/bars38/Russian_ban_words
-  badWordsCyrillicPath = dir + "/bad_words_cyrillic.txt",
-  exceptionsLatinPath = dir + "/exceptions_latin.txt",
-  exceptionsCyrillicPath = dir + "/exceptions_cyrillic.txt",
-  cp866 = `АБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдежзийклмноп${" ".repeat(
-    48
-  )}рстуфхцчшщъыьэюяЁё${" ".repeat(14)}`,
+const M = {};
+const configPath = dir + "/membrane.json";
+// Based on https://code.google.com/archive/p/badwordslist/downloads
+const badWordsLatinPath = dir + "/bad_words_latin.txt";
+// Based on https://github.com/bars38/Russian_ban_words
+const badWordsCyrillicPath = dir + "/bad_words_cyrillic.txt";
+const exceptionsLatinPath = dir + "/exceptions_latin.txt";
+const exceptionsCyrillicPath = dir + "/exceptions_cyrillic.txt";
+const cp866 = `АБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдежзийклмноп${" ".repeat(
+  48,
+)}рстуфхцчшщъыьэюяЁё${" ".repeat(14)}`;
   /**
    * @type {Map<string, VangersUpperLevelClient>}
    */
-  clientPool = new Map(),
-  /**
+const clientPool = new Map();
+/**
    * @type {((function(string, (Buffer|string), number): Promise<void>)|function(string, (Buffer|string), number))[]}
    */
-  reactions = [
-    () => {}, // Default reaction to anything else, e.g. clientKey => { doSomething(); },
-    handshake,
-    receiveGames,
-  ],
+const reactions = [
+  () => {}, // Default reaction to anything else, e.g. clientKey => { doSomething(); },
+  handshake,
+  receiveGames,
+];
+  /* eslint-disable-next-line valid-jsdoc */
   /**
    * @type {(function(string, string, number, number): boolean)[]}
    */
-  conditions = [
-    (clientKey, dataString, dataLength, code) =>
-      dataString ===
+const conditions = [
+  (clientKey, dataString, dataLength, code) =>
+    dataString ===
       `Enter, my son, please...\x00${clientPool.get(clientKey).protocol}`,
-    (clientKey, dataString, dataLength, code) => dataLength && code === 0xc1,
-  ],
+  (clientKey, dataString, dataLength, code) => dataLength && code === 0xc1,
+];
   /**
    * @type {{cyr: string[], lat: string[]}}
    */
-  badWords = { cyr: [], lat: [] },
-  /**
+const badWords = { cyr: [], lat: [] };
+/**
    * @type {{cyr: string[], lat: string[]}}
    */
-  exceptionWords = { cyr: [], lat: [] },
-  /**
+const exceptionWords = { cyr: [], lat: [] };
+/**
    * @type {{cyr: Object.<string, string>, lat: Object.<string, string>}}
    */
-  censorCharmap = {
-    lat: {
-      a: ["a", "а", "@"],
-      b: ["b", "6"],
-      c: ["c", "с", "("],
-      d: ["d"],
-      e: ["e", "е"],
-      f: ["f"],
-      g: ["g"],
-      h: ["h", "н"],
-      i: ["i", "!"],
-      j: ["j"],
-      k: ["k", "к"],
-      l: ["l"],
-      m: ["m", "м"],
-      n: ["n", "п"],
-      o: ["o", "о"],
-      p: ["p", "р"],
-      q: ["q"],
-      r: ["r", "г"],
-      s: ["s", "$"],
-      t: ["t", "+", "7", "т"],
-      u: ["u", "и", "ц"],
-      v: ["v"],
-      w: ["w"],
-      x: ["x", "х"],
-      y: ["y", "у"],
-      z: ["z"],
-    },
-    cyr: {
-      а: ["а", "a", "@"],
-      б: ["б", "6", "b"],
-      в: ["в", "b", "v"],
-      г: ["г", "r", "g"],
-      д: ["д", "d", "g"],
-      е: ["е", "e"],
-      ё: ["ё", "e"],
-      ж: ["ж" /*, 'zh'*/, "*"],
-      з: ["з", "3", "z"],
-      и: ["и", "u", "i"],
-      й: ["й", "u", "i", "y"],
-      к: ["к", "k" /*, 'i{', '|{'*/],
-      л: ["л", "l" /*, 'ji', '/\\'*/],
-      м: ["м", "m"],
-      н: ["н", "h", "n"],
-      о: ["о", "o", "0"],
-      п: ["п", "n", "p"],
-      р: ["р", "r", "p"],
-      с: ["с", "c", "s", "("],
-      т: ["т", "m", "t", "+"],
-      у: ["у", "y", "u"],
-      ф: ["ф", "f"],
-      х: ["х", "x", "h" /*, '}{'*/],
-      ц: ["ц", "c" /*'u,'*/],
-      ч: ["ч", /*'ch',*/ "4"],
-      ш: ["ш" /*, 'sh'*/],
-      щ: ["щ" /*, 'sch'*/],
-      ь: ["ь", "b"],
-      ы: ["ы" /*, 'bi'*/],
-      ъ: ["ъ"],
-      э: ["э", "e"],
-      ю: ["ю" /*, 'io', '|o'*/],
-      я: ["я" /*, 'ya'*/, "r"],
-    },
+const censorCharmap = {
+  lat: {
+    a: ["a", "а", "@"],
+    b: ["b", "6"],
+    c: ["c", "с", "("],
+    d: ["d"],
+    e: ["e", "е"],
+    f: ["f"],
+    g: ["g"],
+    h: ["h", "н"],
+    i: ["i", "!"],
+    j: ["j"],
+    k: ["k", "к"],
+    l: ["l"],
+    m: ["m", "м"],
+    n: ["n", "п"],
+    o: ["o", "о"],
+    p: ["p", "р"],
+    q: ["q"],
+    r: ["r", "г"],
+    s: ["s", "$"],
+    t: ["t", "+", "7", "т"],
+    u: ["u", "и", "ц"],
+    v: ["v"],
+    w: ["w"],
+    x: ["x", "х"],
+    y: ["y", "у"],
+    z: ["z"],
   },
-  //tgStack = [],
-  redirectServerOptions = {
-    /* no specific options for now */
-  };
+  cyr: {
+    а: ["а", "a", "@"],
+    б: ["б", "6", "b"],
+    в: ["в", "b", "v"],
+    г: ["г", "r", "g"],
+    д: ["д", "d", "g"],
+    е: ["е", "e"],
+    ё: ["ё", "e"],
+    ж: ["ж" /* , 'zh'*/, "*"],
+    з: ["з", "3", "z"],
+    и: ["и", "u", "i"],
+    й: ["й", "u", "i", "y"],
+    к: ["к", "k"],
+    л: ["л", "l"],
+    м: ["м", "m"],
+    н: ["н", "h", "n"],
+    о: ["о", "o", "0"],
+    п: ["п", "n", "p"],
+    р: ["р", "r", "p"],
+    с: ["с", "c", "s", "("],
+    т: ["т", "m", "t", "+"],
+    у: ["у", "y", "u"],
+    ф: ["ф", "f"],
+    х: ["х", "x", "h"],
+    ц: ["ц", "c"],
+    ч: ["ч", /* 'ch',*/ "4"],
+    ш: ["ш"],
+    щ: ["щ"],
+    ь: ["ь", "b"],
+    ы: ["ы"],
+    ъ: ["ъ"],
+    э: ["э", "e"],
+    ю: ["ю"],
+    я: ["я" /* , 'ya'*/, "r"],
+  },
+};
+  // tgStack = [],
+const redirectServerOptions = {
+  /* no specific options for now */
+};
 
 /**
  * @type {Server}
@@ -182,27 +183,29 @@ const { Socket } = require("net"),
 let webServer;
 // </editor-fold>
 
+/* elint-disable valid-jsdoc */
 // <editor-fold desc="String functions">
 /**
  * Function used for default output.
  * @param a - The same arguments one would pass to `console.log(...)`
  */
+/* elint-enable valid-jsdoc */
 function log(...a) {
   if (argSilent) return;
-  const date = new Date(),
-    msg = [
-      "FullYear",
-      "Month",
-      "Date",
-      "Hours",
-      "Minutes",
-      "Seconds",
-      "Milliseconds",
-    ]
-      .map((m, i) =>
-        pad(date[`getUTC${m}`]() + (i === 1 ? 1 : 0), !i || i === 6 ? 4 : 2)
-      )
-      .reduce((p, c, i) => p + c + ".. ::: "[i], "");
+  const date = new Date();
+  const msg = [
+    "FullYear",
+    "Month",
+    "Date",
+    "Hours",
+    "Minutes",
+    "Seconds",
+    "Milliseconds",
+  ]
+    .map((m, i) =>
+      pad(date[`getUTC${m}`]() + (i === 1 ? 1 : 0), !i || i === 6 ? 4 : 2),
+    )
+    .reduce((p, c, i) => p + c + ".. ::: "[i], "");
 
   console.log(msg, ...a);
 }
@@ -232,6 +235,7 @@ function decodeChar(code) {
  * @param {string} charString
  * @return {number[]} - CP-866 bytes
  */
+/* eslint-disable-next-line no-unused-vars */
 function encodeString(charString) {
   return Array.prototype.map.call(charString, (char) => encodeChar(char));
 }
@@ -276,14 +280,14 @@ function getRndString(length) {
  * @return {number}
  */
 function distance(a, b) {
-  const m = a.length,
-    n = b.length,
-    d = [[], []],
-    c = [0, 0, 0];
-  let i = 0,
-    j = 0,
-    r1 = 0,
-    r2 = 1;
+  const m = a.length;
+  const n = b.length;
+  const d = [[], []];
+  const c = [0, 0, 0];
+  let i = 0;
+  let j = 0;
+  let r1 = 0;
+  let r2 = 1;
   for (j = 0; j <= n; j++) d[1][j] = j;
   for (i = 1; i <= m; i++) {
     r1 = +!r1;
@@ -312,12 +316,12 @@ function censor(src) {
   // todo You can replace spaces in the source string with "", but you should
   //  somehow keep track of the original __range__ in the src that was occupied
   //  by the filtered string
-  const censorData = [],
-    exceptionData = [];
-  let i = 0,
-    realStr = "",
-    tmpStr = "",
-    tmpWord = "";
+  const censorData = [];
+  const exceptionData = [];
+  let i = 0;
+  let realStr = "";
+  let tmpStr = "";
+  let tmpWord = "";
 
   ["cyr", "lat"].forEach((type) => {
     realStr = src.slice().toLowerCase();
@@ -330,7 +334,7 @@ function censor(src) {
           tmpWord.length * M.exceptionSensitivity
         ) {
           log(
-            `[filter exception] Found word "${word}" as "${tmpStr}" in string "${src}"`
+            `[filter exception] Found word "${word}" as "${tmpStr}" in string "${src}"`,
           );
           exceptionData.push([i, src.slice(i, i + word.length)]);
           realStr =
@@ -345,10 +349,11 @@ function censor(src) {
         replacementList.forEach((replacement) => {
           // todo Keep note of how many extra symbols this specific replacement
           //  inserted and make use of it below in the badWords.forEach(...) cycle
-          for (i = 0; i < src.length; i += 1)
+          for (i = 0; i < src.length; i += 1) {
             realStr = realStr.replaceAll(replacement, realLetter);
+          }
         });
-      }
+      },
     );
     badWords[type].forEach((word) => {
       tmpWord = word.toLowerCase();
@@ -356,7 +361,7 @@ function censor(src) {
         tmpStr = realStr.slice(i, i + word.length);
         if (distance(tmpStr, tmpWord) <= tmpWord.length * M.censorSensitivity) {
           log(
-            `[filter censor] Found word "${word}" as "${tmpStr}" in string "${src}"`
+            `[filter censor] Found word "${word}" as "${tmpStr}" in string "${src}"`,
           );
           censorData.push([i, i + word.length]);
         }
@@ -425,41 +430,41 @@ function initClient(clientKey, { host, port, type, protocol }) {
     alive: true,
     gamesRead: false,
   });
-  client.on("data", async function (data) {
-    const dataString = data.toString(),
-      dataBuffer = data,
-      dataLength = dataBuffer.readUInt16LE(0);
-    let pos = 2,
-      code;
+  client.on("data", async function(data) {
+    const dataString = data.toString();
+    const dataBuffer = data;
+    const dataLength = dataBuffer.readUInt16LE(0);
+    let pos = 2;
+    let code;
     if (dataLength) {
       code = dataBuffer.readUInt8(pos);
       pos += 1;
     }
     reactions[
       conditions.findIndex(
-        (c) => !!c(clientKey, dataString, dataLength, code)
+        (c) => !!c(clientKey, dataString, dataLength, code),
       ) + 1
     ](clientKey, dataBuffer, pos);
   });
-  client.on("error", function () {
+  client.on("error", function() {
     log(`[${clientKey}] error`);
     disconnect(clientKey);
   });
-  client.on("timeout", function () {
+  client.on("timeout", function() {
     log(`[${clientKey}] timeout`);
     disconnect(clientKey);
   });
-  client.on("close", function () {
+  client.on("close", function() {
     log(
       `[${clientKey}] connection closed, try again in ${
         M.reconnectTimeout / 1000 / 60
-      } min`
+      } min`,
     );
     clientPool.get(clientKey).alive = false;
     globalThis.clearTimeout(clientPool.get(clientKey).lastTimeout);
     clientPool.get(clientKey).lastTimeout = globalThis.setTimeout(
       () => initClient(clientKey, { host, port, type, protocol }),
-      M.reconnectTimeout
+      M.reconnectTimeout,
     );
   });
   connect(clientKey);
@@ -476,10 +481,12 @@ function connect(clientKey) {
   });
 }
 
+/* elint-disable valid-jsdoc */
 /**
  * Disconnect from a Vangers server.
  * @param clientKey
  */
+/* elint-enable valid-jsdoc */
 function disconnect(clientKey) {
   send(clientKey, 0x86, Buffer.alloc(0));
   clientPool.get(clientKey).client.destroy();
@@ -497,15 +504,17 @@ function send(clientKey, code, dataBuffer) {
   clientPool
     .get(clientKey)
     .client.write(
-      Buffer.concat([lengthBuffer, Buffer.from([code]), dataBuffer])
+      Buffer.concat([lengthBuffer, Buffer.from([code]), dataBuffer]),
     );
 }
 
+/* eslint-disable valid-jsdoc */
 /**
  * Reaction to successfully connecting to a Vangers server.
  * @param clientKey
  * @return {Promise<void>}
  */
+/* eslint-enable valid-jsdoc */
 async function handshake(clientKey) {
   log(`[${clientKey}] handshake`);
   requestGames(clientKey);
@@ -530,24 +539,24 @@ async function receiveGames(clientKey, dataBuffer, pos) {
   const /**
      * @type {Object.<string, VangersGame>}
      */
-    games = {},
-    gamesCount = dataBuffer.readUInt8(pos),
-    /**
+    games = {};
+  const gamesCount = dataBuffer.readUInt8(pos);
+  /**
      * @type {VangersUpperLevelClient}
      */
-    client = clientPool.get(clientKey),
-    /**
+  const client = clientPool.get(clientKey);
+  /**
      * @type {Object.<string, VangersGame>}
      */
-    oldGames = client.games,
-    /**
+  const oldGames = client.games;
+  /**
      * @type {VangersGame[]}
      */
-    newGames = [];
+  const newGames = [];
   let gameIndex = 0;
   while (pos < dataBuffer.length && gameIndex < gamesCount) {
-    let gameName = [],
-      tmpName = "";
+    const gameName = [];
+    let tmpName = "";
     const id = dataBuffer.readUInt32LE(pos + 1);
     pos += 5;
     while (dataBuffer[pos] !== 0) {
@@ -579,17 +588,18 @@ async function receiveGames(clientKey, dataBuffer, pos) {
   Object.entries(games).forEach(([gameId, gameData]) => {
     if (gameData.isNew) newGames.push({ ...gameData, id: gameId });
   });
-  if (newGames.length)
+  if (newGames.length) {
     sendToTgChat(
       M.tgChats[0],
-      (newGames.length > 1
-        ? `Созданы новые игры:${newGames.reduce(
-            (acc, gameData) => acc + "\n" + getTgGameLink(client, gameData),
-            ""
-          )}`
-        : `Создана новая игра: ${getTgGameLink(client, newGames[0])}`) +
-        `\n\nНажмите по названию игры, чтобы присоединиться к ней (требуется установленная из Steam игра)`
+      (newGames.length > 1 ?
+        `Созданы новые игры:${newGames.reduce(
+          (acc, gameData) => acc + "\n" + getTgGameLink(client, gameData),
+          "",
+        )}` :
+        `Создана новая игра: ${getTgGameLink(client, newGames[0])}`) +
+        "\n\nНажмите по названию игры, чтобы присоединиться к ней (требуется установленная из Steam игра)",
     );
+  }
 
   client.games = games;
   client.gamesRead = true;
@@ -599,7 +609,7 @@ async function receiveGames(clientKey, dataBuffer, pos) {
     // todo Timeout here should always be the same; "gameRequestCooldown"
     //  instead needs to be used just for TG messages (above, when
     //  sendToTgChat(...) is called)
-    newGames.length ? M.gameRequestCooldown : M.gameRequestTimeout
+    newGames.length ? M.gameRequestCooldown : M.gameRequestTimeout,
   );
 }
 // </editor-fold>
@@ -613,24 +623,24 @@ async function receiveGames(clientKey, dataBuffer, pos) {
 function sendToTgChat(chatId, content) {
   log(`[tg] sendToChat ${chatId}: ${content}`);
   const json = JSON.stringify({
-      chat_id: chatId,
-      parse_mode: "HTML",
-      disable_web_page_preview: true,
-      text: content,
-    }),
-    req = request(
-      {
-        host: "api.telegram.org",
-        port: M.tgPort,
-        path: `/bot${M.tgToken}/sendMessage`,
-        method: "POST",
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-        },
+    chat_id: chatId,
+    parse_mode: "HTML",
+    disable_web_page_preview: true,
+    text: content,
+  });
+  const req = request(
+    {
+      host: "api.telegram.org",
+      port: M.tgPort,
+      path: `/bot${M.tgToken}/sendMessage`,
+      method: "POST",
+      headers: {
+        "Accept": "application/json",
+        "Content-Type": "application/json",
       },
-      receiveTgResponse
-    );
+    },
+    receiveTgResponse,
+  );
   req.write(json);
   req.end();
 }
@@ -739,7 +749,7 @@ async function init() {
 
   // Init pool of connections to Vangers' servers
   M.servers.forEach((serverData) =>
-    initClient(`${serverData.host}:${serverData.port}`, serverData)
+    initClient(`${serverData.host}:${serverData.port}`, serverData),
   );
 }
 

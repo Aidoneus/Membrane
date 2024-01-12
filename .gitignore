@@ -11,3 +11,6 @@ pm2_membrane.sh
 
 # IDE files
 .idea
+
+# yarn
+node_modules
