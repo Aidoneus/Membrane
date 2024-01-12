@@ -15,7 +15,7 @@ module.exports = {
   plugins: [
     new ESLintPlugin({
       fix: true,
-      extensions: ["ts"],
+      extensions: ["ts", "js"],
       useEslintrc: false,
       overrideConfigFile: ".eslintrc.json",
     }),
