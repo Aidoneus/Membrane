@@ -753,7 +753,7 @@ async function init() {
       existsSync(exceptionsCyrillicPath),
       `Exception words file ${exceptionsCyrillicPath} was not found, aborting`,
     ],
-  ].forEach((doesExist, errorMessage) => {
+  ].forEach(([doesExist, errorMessage]) => {
     if (!doesExist) {
       log(errorMessage);
       process.exit(1);
