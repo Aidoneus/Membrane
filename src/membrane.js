@@ -22,7 +22,7 @@
  * @property {number} port
  * @property {number} type
  * @property {number} protocol
- * @property {Object.<string, VangersGame>} games
+ * @property {Object<string, VangersGame>} games
  * @property {(null|number)} lastTimeout
  * @property {boolean} alive
  * @property {boolean} gamesRead
@@ -46,23 +46,23 @@ const argsI = [
 const argHelp = argsI[0] >= 0 || argsI[1] >= 0;
 const argSilent = argsI[2] >= 0 || argsI[3] >= 0;
 /**
-   * @type {Object}
-   * @property {Object.<string, number>} types
-   * @property {{host: string, port: number, type: number, protocol: string}[]} servers
-   * @property {number} reconnectTimeout
-   * @property {number} gameRequestTimeout
-   * @property {number} gameRequestCooldown
-   * @property {string[]} gameModes
-   * @property {string[]} gameLetters
-   * @property {string} tgToken
-   * @property {number} tgPort
-   * @property {number} tgSendTimeout
-   * @property {number[]} tgChats
-   * @property {string} redirectHost
-   * @property {number} redirectPort
-   * @property {number} censorSensitivity
-   * @property {number} exceptionSensitivity
-   */
+ * @type {Object}
+ * @property {Object<string, number>} types
+ * @property {{host: string, port: number, type: number, protocol: string}[]} servers
+ * @property {number} reconnectTimeout
+ * @property {number} gameRequestTimeout
+ * @property {number} gameRequestCooldown
+ * @property {string[]} gameModes
+ * @property {string[]} gameLetters
+ * @property {string} tgToken
+ * @property {number} tgPort
+ * @property {number} tgSendTimeout
+ * @property {number[]} tgChats
+ * @property {string} redirectHost
+ * @property {number} redirectPort
+ * @property {number} censorSensitivity
+ * @property {number} exceptionSensitivity
+ */
 const M = {};
 const configPath = dir + "/membrane.json";
 // Based on https://code.google.com/archive/p/badwordslist/downloads
@@ -74,39 +74,36 @@ const exceptionsCyrillicPath = dir + "/exceptions_cyrillic.txt";
 const cp866 = `АБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдежзийклмноп${" ".repeat(
   48,
 )}рстуфхцчшщъыьэюяЁё${" ".repeat(14)}`;
-  /**
-   * @type {Map<string, VangersUpperLevelClient>}
-   */
 const clientPool = new Map();
 /**
-   * @type {((function(string, (Buffer|string), number): Promise<void>)|function(string, (Buffer|string), number))[]}
-   */
+ * @type {((function(string, (Buffer|string), number): Promise<void>)|function(string, (Buffer|string), number))[]}
+ */
 const reactions = [
   () => {}, // Default reaction to anything else, e.g. clientKey => { doSomething(); },
   handshake,
   receiveGames,
 ];
-  /* eslint-disable-next-line valid-jsdoc */
-  /**
-   * @type {(function(string, string, number, number): boolean)[]}
-   */
+/* eslint-disable-next-line valid-jsdoc */
+/**
+ * @type {(function(string, string, number, number): boolean)[]}
+ */
 const conditions = [
   (clientKey, dataString, dataLength, code) =>
     dataString ===
       `Enter, my son, please...\x00${clientPool.get(clientKey).protocol}`,
   (clientKey, dataString, dataLength, code) => dataLength && code === 0xc1,
 ];
-  /**
-   * @type {{cyr: string[], lat: string[]}}
-   */
+/**
+ * @type {{cyr: string[], lat: string[]}}
+ */
 const badWords = { cyr: [], lat: [] };
 /**
-   * @type {{cyr: string[], lat: string[]}}
-   */
+ * @type {{cyr: string[], lat: string[]}}
+ */
 const exceptionWords = { cyr: [], lat: [] };
 /**
-   * @type {{cyr: Object.<string, string>, lat: Object.<string, string>}}
-   */
+ * @type {{cyr: Object<string, string>, lat: Object<string, string>}}
+ */
 const censorCharmap = {
   lat: {
     a: ["a", "а", "@"],
@@ -172,7 +169,7 @@ const censorCharmap = {
     я: ["я" /* , 'ya'*/, "r"],
   },
 };
-  // tgStack = [],
+// tgStack = [],
 const redirectServerOptions = {
   /* no specific options for now */
 };
@@ -203,7 +200,7 @@ function log(...a) {
     "Milliseconds",
   ]
     .map((m, i) =>
-      pad(date[`getUTC${m}`]() + (i === 1 ? 1 : 0), !i || i === 6 ? 4 : 2),
+      pad(date[`getUTC${m}`]() + (i === 1 ? 1 : 0), !i || i === 6 ? 3 : 2),
     )
     .reduce((p, c, i) => p + c + ".. ::: "[i], "");
 
@@ -310,10 +307,10 @@ function distance(a, b) {
  * @return {string}
  */
 function censor(src) {
-  // todo Due to possible usage of one symbol as a replacement for multiple
+  // TODO Due to possible usage of one symbol as a replacement for multiple
   //  different ones there should be a way to form alternate possible strings
   //  with different __order__ of replacements
-  // todo You can replace spaces in the source string with "", but you should
+  // TODO You can replace spaces in the source string with "", but you should
   //  somehow keep track of the original __range__ in the src that was occupied
   //  by the filtered string
   const censorData = [];
@@ -347,7 +344,7 @@ function censor(src) {
     Object.entries(censorCharmap[type]).forEach(
       ([realLetter, replacementList]) => {
         replacementList.forEach((replacement) => {
-          // todo Keep note of how many extra symbols this specific replacement
+          // TODO Keep note of how many extra symbols this specific replacement
           //  inserted and make use of it below in the badWords.forEach(...) cycle
           for (i = 0; i < src.length; i += 1) {
             realStr = realStr.replaceAll(replacement, realLetter);
@@ -536,10 +533,10 @@ function requestGames(clientKey) {
  * @return {Promise<void>}
  */
 async function receiveGames(clientKey, dataBuffer, pos) {
-  const /**
-     * @type {Object.<string, VangersGame>}
-     */
-    games = {};
+  /**
+   * @type {Object.<string, VangersGame>}
+   */
+  const games = {};
   const gamesCount = dataBuffer.readUInt8(pos);
   /**
      * @type {VangersUpperLevelClient}
@@ -550,8 +547,8 @@ async function receiveGames(clientKey, dataBuffer, pos) {
      */
   const oldGames = client.games;
   /**
-     * @type {VangersGame[]}
-     */
+   * @type {VangersGame[]}
+   */
   const newGames = [];
   let gameIndex = 0;
   while (pos < dataBuffer.length && gameIndex < gamesCount) {
@@ -572,7 +569,7 @@ async function receiveGames(clientKey, dataBuffer, pos) {
         .slice(0, -1),
       players: Number.parseInt(tmpName[tmpName.length - 3], 10),
       mode: M.gameModes[M.gameLetters.indexOf(tmpName[tmpName.length - 2])],
-      // todo Use both the time told by server and time measured by Membrane
+      // TODO Use both the time told by server and time measured by Membrane
       //  to approximate a more realistic lifetime of a game, that'd allow
       //  to resume tracking lifetime of games after Membrane restarts
       // in seconds
@@ -586,17 +583,20 @@ async function receiveGames(clientKey, dataBuffer, pos) {
   log(`[${clientKey}] games:`, games);
 
   Object.entries(games).forEach(([gameId, gameData]) => {
-    if (gameData.isNew) newGames.push({ ...gameData, id: gameId });
+    if (
+      gameData.isNew &&
+      !gameData.name.includes("[тихо]") &&
+      !gameData.name.includes("[silent]")
+    ) newGames.push({ ...gameData, id: gameId });
   });
   if (newGames.length) {
     sendToTgChat(
-      M.tgChats[0],
+      M.tgChats[0][0],
+      M.tgChats[0][1] ?? undefined,
       (newGames.length > 1 ?
-        `Созданы новые игры:${newGames.reduce(
-          (acc, gameData) => acc + "\n" + getTgGameLink(client, gameData),
-          "",
-        )}` :
-        `Создана новая игра: ${getTgGameLink(client, newGames[0])}`) +
+        `Созданы новые игры:${newGames.reduce((acc, gameData) => acc + "\n" + getTgGameLink(client, gameData), "")}` :
+        `Создана новая игра: ${getTgGameLink(client, newGames[0])}`
+      ) +
         "\n\nНажмите по названию игры, чтобы присоединиться к ней (требуется установленная из Steam игра)",
     );
   }
@@ -606,7 +606,7 @@ async function receiveGames(clientKey, dataBuffer, pos) {
   globalThis.clearTimeout(client.lastTimeout);
   client.lastTimeout = globalThis.setTimeout(
     () => requestGames(clientKey),
-    // todo Timeout here should always be the same; "gameRequestCooldown"
+    // TODO Timeout here should always be the same; "gameRequestCooldown"
     //  instead needs to be used just for TG messages (above, when
     //  sendToTgChat(...) is called)
     newGames.length ? M.gameRequestCooldown : M.gameRequestTimeout,
@@ -618,16 +618,18 @@ async function receiveGames(clientKey, dataBuffer, pos) {
 /**
  * Send a Telegram text message to the specified chat.
  * @param {number} chatId
+ * @param {number} [threadId]
  * @param {string} content
  */
-function sendToTgChat(chatId, content) {
-  log(`[tg] sendToChat ${chatId}: ${content}`);
-  const json = JSON.stringify({
+function sendToTgChat(chatId, threadId, content) {
+  log(`[tg] sendToChat ${chatId} ${threadId ? threadId : "-"}: ${content}`);
+  const json = {
     chat_id: chatId,
     parse_mode: "HTML",
     disable_web_page_preview: true,
     text: content,
-  });
+  };
+  if (threadId) json.message_thread_id = threadId;
   const req = request(
     {
       host: "api.telegram.org",
@@ -641,7 +643,7 @@ function sendToTgChat(chatId, content) {
     },
     receiveTgResponse,
   );
-  req.write(json);
+  req.write(JSON.stringify(json));
   req.end();
 }
 
@@ -667,7 +669,9 @@ function receiveTgResponse(response) {
 function getTgGameLink(client, gameData) {
   return `<a href="${M.redirectHost}:${M.redirectPort}/r?s=${client.host}&p=${
     client.port
-  }&g=${gameData.id}">${censor(gameData.name.slice())}</a> (${gameData.mode})`;
+  }&g=${gameData.id}">${censor(gameData.name.slice())}</a> (${
+    gameData.mode
+  }) на <code>${client.host}</code>:<code>${client.port}</code>`;
 }
 // </editor-fold>
 
@@ -726,23 +730,59 @@ async function init() {
   }
 
   [
-    [configPath, "Configuration file"],
-    [badWordsLatinPath, "Bad words file"],
-    [badWordsCyrillicPath, "Bad words file"],
-    [exceptionsLatinPath, "Exception words file"],
-    [exceptionsCyrillicPath, "Exception words file"],
-  ].forEach((fp, fn) => {
-    if (!existsSync(fp)) {
-      log(`${fn} ${fp} was not found, aborting`);
+    [
+      existsSync(configPath),
+      `Configuration file ${configPath} was not found, aborting`,
+    ],
+    [
+      existsSync(badWordsLatinPath),
+      `Bad words file ${badWordsLatinPath} was not found, aborting`,
+    ],
+    [
+      existsSync(badWordsCyrillicPath),
+      `Bad words file ${badWordsCyrillicPath} was not found, aborting`,
+    ],
+    [
+      existsSync(exceptionsLatinPath),
+      `Exception words file ${exceptionsLatinPath} was not found, aborting`,
+    ],
+    [
+      existsSync(exceptionsCyrillicPath),
+      `Exception words file ${exceptionsCyrillicPath} was not found, aborting`,
+    ],
+  ].forEach((doesExist, errorMessage) => {
+    if (!doesExist) {
+      log(errorMessage);
       process.exit(1);
     }
   });
 
-  Object.assign(M, readJson(configPath));
-  badWords.lat.push(...readArray(badWordsLatinPath));
-  badWords.cyr.push(...readArray(badWordsCyrillicPath));
-  exceptionWords.lat.push(...readArray(exceptionsLatinPath));
-  exceptionWords.cyr.push(...readArray(exceptionsCyrillicPath));
+  Object.assign(
+    M,
+    JSON.parse(readFileSync(configPath, { encoding: "utf8", flag: "r" })),
+  );
+  badWords.lat.push(
+    ...readFileSync(badWordsLatinPath, { encoding: "utf8", flag: "r" }).split(
+      "\n",
+    ),
+  );
+  badWords.cyr.push(
+    ...readFileSync(badWordsCyrillicPath, {
+      encoding: "utf8",
+      flag: "r",
+    }).split("\n"),
+  );
+  exceptionWords.lat.push(
+    ...readFileSync(exceptionsLatinPath, { encoding: "utf8", flag: "r" }).split(
+      "\n",
+    ),
+  );
+  exceptionWords.cyr.push(
+    ...readFileSync(exceptionsCyrillicPath, {
+      encoding: "utf8",
+      flag: "r",
+    }).split("\n"),
+  );
 
   webServer = createServer(redirectServerOptions, redirectReqListener);
   webServer.listen(M.redirectPort);

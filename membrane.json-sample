@@ -13,10 +13,16 @@
       "protocol": "\u0002"
     },
     {
+      "host": "cloud.kdlab.com",
+      "port": 2197,
+      "type": 3,
+      "protocol": "\u0002"
+    },
+    {
       "host": "fenex.vangers.net",
       "port": 2197,
-      "type": 0,
-      "protocol": "\u0001"
+      "type": 3,
+      "protocol": "\u0002"
     },
     {
       "host": "kiv.name",
@@ -45,9 +51,12 @@
     "Мехосома",
     "Пассемблос",
     "Охотрон",
-    "Мастодонт"
+    "Мастодонт",
+    "Мир-Раж",
+    "УниВанг-3/8",
+    "Берегуны"
   ],
-  "gameLetters": "VMPHD",
+  "gameLetters": "VMPHDRUC",
   "tgToken": "Place your token here",
   "tgPort": 443,
   "tgSendTimeout": 10000,

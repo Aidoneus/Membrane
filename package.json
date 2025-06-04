@@ -1,7 +1,7 @@
 {
   "name": "membrane",
   "version": "0.1.5",
-  "description": "Vangers multiplayer servers' monitoring and notification tool, integrated with the Telegram messaging app. ",
+  "description": "Vangers multiplayer servers' monitoring and notification tool, integrated with the Telegram messaging app.",
   "repository": "https://github.com/Aidoneus/Membrane",
   "author": "Alexander Dormidontov",
   "license": "MIT",
