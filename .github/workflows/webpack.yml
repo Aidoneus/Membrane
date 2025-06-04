@@ -26,5 +26,5 @@ jobs:
       run: |
         npm install -g yarn
         yarn
-        yarn run eslint . --ext js --max-warnings 0
+        yarn eslint
         yarn run webpack

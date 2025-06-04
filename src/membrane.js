@@ -383,23 +383,25 @@ function censor(src) {
 // </editor-fold>
 
 // <editor-fold desc="File functions">
-// /**
-//  * Reads the text file from the `fp` path and splits it by linebreaks into array.
-//  * @param {string} fp
-//  * @return {string[]}
-//  */
-// function readArray(fp) {
-//   return readFileSync(fp, { encoding: "utf8", flag: "r" }).split("\n");
-// }
-//
-// /**
-//  * Reads the text file from the `fp` path and parses it as JSON.
-//  * @param {string} fp
-//  * @return {Object}
-//  */
-// function readJson(fp) {
-//   return JSON.parse(readFileSync(fp, { encoding: "utf8", flag: "r" }));
-// }
+/**
+ * Reads the text file from the `fp` path and splits it by linebreaks into array.
+ * @param {string} fp
+ * @return {string[]}
+ */
+/* eslint-disable-next-line no-unused-vars */
+function readArray(fp) {
+  return readFileSync(fp, { encoding: "utf8", flag: "r" }).split("\n");
+}
+
+/**
+ * Reads the text file from the `fp` path and parses it as JSON.
+ * @param {string} fp
+ * @return {Object}
+ */
+/* eslint-disable-next-line no-unused-vars */
+function readJson(fp) {
+  return JSON.parse(readFileSync(fp, { encoding: "utf8", flag: "r" }));
+}
 // </editor-fold>
 
 // <editor-fold desc="Vangers network functions">

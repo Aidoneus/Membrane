@@ -10,7 +10,7 @@ module.exports = {
   },
   output: {
     filename: "[name].min.js",
-    path: path.resolve(__dirname),
+    path: path.resolve(__dirname, "build"),
   },
   plugins: [
     new ESLintPlugin({

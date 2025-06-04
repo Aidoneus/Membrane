@@ -4,7 +4,8 @@
   "description": "Vangers multiplayer servers' monitoring and notification tool, integrated with the Telegram messaging app.",
   "repository": "https://github.com/Aidoneus/Membrane",
   "scripts": {
-    "prettier": "npx prettier --list-different --write --ignore-unknown ."
+    "prettier": "npx prettier --list-different --write --ignore-unknown .",
+    "eslint": "npx eslint . --ext js --max-warnings 0"
   },
   "author": "Alexander Dormidontov",
   "license": "MIT",

@@ -36,11 +36,11 @@ Make a copy of the `membrane.json-sample` file and rename it to `membrane.json` 
 1. Install node & npm
 2. Install yarn with `npm install -g yarn`
 3. Install dependencies by calling `yarn`
-4. Build the code with `yarn run webpack` or `yarn run webpack --watch`
+4. Build the code with `yarn run webpack` or `yarn run webpack --watch`, it'll be placed in the `build` subdirectory
 
 ## Contributing
 
-Before committing changes make sure to run `yarn prettier` & fix ESLint errors & warnings (or ignore them in-place and provide explanation for doing so in comments where appropriate).
+Before committing changes make sure to run `yarn prettier` & `yarn eslint` & fix ESLint errors & warnings, or ignore them in-place and provide explanation for doing so in comments where appropriate.
 
 ## Change log
 
