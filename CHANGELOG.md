@@ -5,13 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.6] - 2025-06-04
+
+### Added
+
+- Notification suppression for games with `[silent]`/`[тихо]` in their names.
+- Sending messages to specific topics in "forum" Telegram chats.
+- Configuration example now has more servers & Cx game modes.
+- More words in `bad_words_*` & `exceptions_*`.
+
+### Fixed
+
+- Formatting here and there.
+
+### Removed
+
+- Commented out some functions that aren't used at the moment, but are likely to be used in the future.
+
 ## [0.1.5] - 2024-01-12
 
 ### Added
 
- - Webpack build system
- - Linter based on google recommendations
- - Action for github
+- Webpack build system
+- Linter based on Google recommendations
+- Action for GitHub
 
 ## [0.1.4] - 2023-12-04
 
@@ -74,6 +91,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Usage of an HTTP server to create redirect links that Telegram considers valid to a different URL formed using Steam Browser Protocol, which allows to start up the game and put players immediately into specific game (without the need for players to type server address and port and select a game themselves).
 - Simple censoring of Russian swear language.
 
+[0.1.6]: https://github.com/Aidoneus/Membrane/releases/tag/v0.1.6
+[0.1.5]: https://github.com/Aidoneus/Membrane/releases/tag/v0.1.5
 [0.1.4]: https://github.com/Aidoneus/Membrane/releases/tag/v0.1.4
 [0.1.3]: https://github.com/Aidoneus/Membrane/releases/tag/v0.1.3
 [0.1.2]: https://github.com/Aidoneus/Membrane/releases/tag/v0.1.2

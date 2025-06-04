@@ -26,7 +26,7 @@ Make a copy of the `membrane.json-sample` file and rename it to `membrane.json` 
 - `exceptionSensitivity`: same as `censorSensitivity`, but for "exception" words, which are prioritized over "bad" words.
 - `redirectHost`: as Telegram does not consider links using Steam Browser Protocol as valid, this bot sets up a separate web server, whose only task is to redirect users to such links from a Telegram-compliable links. If user decides to start redirect server as a completely separate application somewhere else, they can provide a corresponding host name here.
 - `redirectPort`: port to be used with the `redirectHost` when forming links to send to Telegram chats.
-- `gameRequestTimeout`: milliseconds between getting an answer and sending a game info request __on one Vangers server__ (requesting clients are run in parallel), when no new games are found.
+- `gameRequestTimeout`: milliseconds between getting an answer and sending a game info request **on one Vangers server** (requesting clients are run in parallel), when no new games are found.
 - `gameRequestCooldown`: same as `gameRequestTimeout`, but is used when new games were found.
 - `reconnectTimeout`: milliseconds between trying to connect to a Vangers server after previous attempt was failed (e.g. server is down).
 - `servers`: list of Vangers servers that bot will gather info about. `type` field is used only to customize messages sent to Telegram (i.e. to tell players to download specific modification for some server).
@@ -35,9 +35,12 @@ Make a copy of the `membrane.json-sample` file and rename it to `membrane.json` 
 
 1. Install node & npm
 2. Install yarn with `npm install -g yarn`
-2. Install dependencies by calling `yarn`
-3. Build the code with `yarn run webpack` or `yarn run webpack --watch`
+3. Install dependencies by calling `yarn`
+4. Build the code with `yarn run webpack` or `yarn run webpack --watch`
 
+## Contributing
+
+Before committing changes make sure to run `yarn prettier` & fix ESLint errors & warnings (or ignore them in-place and provide explanation for doing so in comments where appropriate).
 
 ## Change log
 

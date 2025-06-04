@@ -90,7 +90,7 @@ const reactions = [
 const conditions = [
   (clientKey, dataString, dataLength, code) =>
     dataString ===
-      `Enter, my son, please...\x00${clientPool.get(clientKey).protocol}`,
+    `Enter, my son, please...\x00${clientPool.get(clientKey).protocol}`,
   (clientKey, dataString, dataLength, code) => dataLength && code === 0xc1,
 ];
 /**
@@ -427,7 +427,7 @@ function initClient(clientKey, { host, port, type, protocol }) {
     alive: true,
     gamesRead: false,
   });
-  client.on("data", async function(data) {
+  client.on("data", async function (data) {
     const dataString = data.toString();
     const dataBuffer = data;
     const dataLength = dataBuffer.readUInt16LE(0);
@@ -443,15 +443,15 @@ function initClient(clientKey, { host, port, type, protocol }) {
       ) + 1
     ](clientKey, dataBuffer, pos);
   });
-  client.on("error", function() {
+  client.on("error", function () {
     log(`[${clientKey}] error`);
     disconnect(clientKey);
   });
-  client.on("timeout", function() {
+  client.on("timeout", function () {
     log(`[${clientKey}] timeout`);
     disconnect(clientKey);
   });
-  client.on("close", function() {
+  client.on("close", function () {
     log(
       `[${clientKey}] connection closed, try again in ${
         M.reconnectTimeout / 1000 / 60
@@ -539,12 +539,12 @@ async function receiveGames(clientKey, dataBuffer, pos) {
   const games = {};
   const gamesCount = dataBuffer.readUInt8(pos);
   /**
-     * @type {VangersUpperLevelClient}
-     */
+   * @type {VangersUpperLevelClient}
+   */
   const client = clientPool.get(clientKey);
   /**
-     * @type {Object.<string, VangersGame>}
-     */
+   * @type {Object.<string, VangersGame>}
+   */
   const oldGames = client.games;
   /**
    * @type {VangersGame[]}
@@ -587,16 +587,17 @@ async function receiveGames(clientKey, dataBuffer, pos) {
       gameData.isNew &&
       !gameData.name.includes("[тихо]") &&
       !gameData.name.includes("[silent]")
-    ) newGames.push({ ...gameData, id: gameId });
+    ) {
+      newGames.push({ ...gameData, id: gameId });
+    }
   });
   if (newGames.length) {
     sendToTgChat(
       M.tgChats[0][0],
       M.tgChats[0][1] ?? undefined,
-      (newGames.length > 1 ?
-        `Созданы новые игры:${newGames.reduce((acc, gameData) => acc + "\n" + getTgGameLink(client, gameData), "")}` :
-        `Создана новая игра: ${getTgGameLink(client, newGames[0])}`
-      ) +
+      (newGames.length > 1
+        ? `Созданы новые игры:${newGames.reduce((acc, gameData) => acc + "\n" + getTgGameLink(client, gameData), "")}`
+        : `Создана новая игра: ${getTgGameLink(client, newGames[0])}`) +
         "\n\nНажмите по названию игры, чтобы присоединиться к ней (требуется установленная из Steam игра)",
     );
   }
@@ -637,7 +638,7 @@ function sendToTgChat(chatId, threadId, content) {
       path: `/bot${M.tgToken}/sendMessage`,
       method: "POST",
       headers: {
-        "Accept": "application/json",
+        Accept: "application/json",
         "Content-Type": "application/json",
       },
     },
